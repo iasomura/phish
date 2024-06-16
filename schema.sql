@@ -174,3 +174,8 @@ ALTER TABLE ONLY public.website_data
 -- PostgreSQL database dump complete
 --
 
+-- mhtml_content_pc列をBYTEA型で追加
+ALTER TABLE website_data ADD COLUMN mhtml_content_pc BYTEA;
+ALTER TABLE website_data ADD COLUMN mhtml_mobile_site_iphone BYTEA;
+ALTER TABLE website_data ADD COLUMN mhtml_mobile_site_android BYTEA;
+
