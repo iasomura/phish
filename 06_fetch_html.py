@@ -32,6 +32,12 @@ basefolder = config['basefolder']
 if not os.path.exists(basefolder):
     os.makedirs(basefolder)
 
+
+# mhtmlの保存先フォルダ
+basefolder_mhtml = config['basefolder_mhtml']
+if not os.path.exists(basefolder_mhtml):
+    os.makedirs(basefolder_mhtml)
+
 # リダイレクトの最大回数
 MAX_REDIRECTS = 10
 
@@ -60,41 +66,32 @@ async def execute_sql(sql, *params):
             logging.debug("Connection closed.")
         logging.debug("Exiting execute_sql")
 
-# ウェブサイトのHTMLコンテンツを取得する関数
-async def fetch_website(url, user_agent):
-    headers = {'User-Agent': user_agent}
-    redirect_url = None
-    html_content = None
-    redirects = 0
-
+# ウェブサイトのHTMLコンテンツをMHTML形式で取得する関数
+async def fetch_website_as_mhtml(url, user_agent):
+    browser = None
     try:
-        # HTTPセッションを作成
-        async with aiohttp.ClientSession() as session:
-            while redirects <= MAX_REDIRECTS:
-                # リクエストを送信
-                async with session.get(url, headers=headers, allow_redirects=False) as response:
-                    if response.status == 200:
-                        # ステータスコード200の場合、HTMLコンテンツを取得
-                        html_content = await response.text()
-                        break
-                    elif response.status in (301, 302, 307, 308):
-                        # リダイレクト対応
-                        redirect_url = response.headers.get('Location')
-                        url = redirect_url
-                        redirects += 1
-                    else:
-                        # その他のステータスコードの場合はループを抜ける
-                        break
+        # Pyppeteerでブラウザを起動
+        browser = await launch(headless=True, args=['--no-sandbox'])
+        page = await browser.newPage()
+        # ユーザーエージェントを設定
+        await page.setUserAgent(user_agent)
+        # 指定されたURLに移動
+        await page.goto(url)
+        # MHTML形式でページを保存
+        response = await page._client.send('Page.captureSnapshot', {'format': 'mhtml'})
+        mhtml_content = response.get('data')  # 'data'キーの値を取得
+        # MHTMLコンテンツをバイナリに変換（UTF-8エンコードは不要）
+        mhtml_content = mhtml_content.encode('utf-8')
 
-                    if redirects > MAX_REDIRECTS:
-                        logging.error(f"{datetime.now().isoformat()} - Max redirects exceeded for {url}")
-                        break
-    except aiohttp.ClientError as e:
-        logging.error(f"{datetime.now().isoformat()} - HTTP Error: {str(e)}")
+        return mhtml_content
     except Exception as e:
-        logging.error(f"{datetime.now().isoformat()} - System Error: {str(e)}")
+        logging.error(f"Failed to fetch MHTML content: {e}")
+        return None
+    finally:
+        # ブラウザを閉じる
+        if browser:
+            await browser.close()
 
-    return html_content, redirect_url
 
 # ウェブサイトのスクリーンショットを取得する関数
 async def capture_screenshot(url, user_agent, filename, timeout=180):
@@ -131,22 +128,26 @@ async def process_website(destination, semaphore, progress_tracker):
     mobile_target_url = url_mobile_site or url or f"http://{domain}"
 
     async with semaphore:
-        # 各ユーザーエージェントごとにHTMLコンテンツを取得
-        html_content_pc, redirect_url_pc = await fetch_website(target_url, user_agents['Chrome'])
-        html_content_iphone, redirect_url_iphone = await fetch_website(target_url, user_agents['iPhone'])
-        html_content_android, redirect_url_android = await fetch_website(target_url, user_agents['Android'])
+        # 各ユーザーエージェントごとにMHTMLコンテンツを取得
+        mhtml_content_pc = await fetch_website_as_mhtml(target_url, user_agents['Chrome'])
+        mhtml_content_iphone = await fetch_website_as_mhtml(target_url, user_agents['iPhone'])
+        mhtml_content_android = await fetch_website_as_mhtml(target_url, user_agents['Android'])
 
-    # HTMLコンテンツが取得できた場合
-    if html_content_pc or redirect_url_pc or html_content_iphone or redirect_url_iphone:
+    # MHTMLコンテンツが取得できた場合
+    if mhtml_content_pc or mhtml_content_iphone or mhtml_content_android:
         sql = """
         UPDATE website_data SET 
-            html_pc_site = $1, url_pc_redirect = $2, 
-            html_mobile_site_iphone = $3, url_mobile_redirect_iphone = $4, 
-            html_mobile_site_android = $5, url_mobile_redirect_android = $6, 
+            mhtml_pc_site = $1, 
+            mhtml_mobile_site_iphone = $2, 
+            mhtml_mobile_site_android = $3, 
             status = 6, last_update = NOW() 
-        WHERE id = $7
+        WHERE id = $4
         """
-        await execute_sql(sql, html_content_pc, redirect_url_pc, html_content_iphone, redirect_url_iphone, html_content_android, redirect_url_android, website_id)
+        #await execute_sql(sql, psycopg2.Binary(mhtml_content_pc, mhtml_content_iphone, mhtml_content_android, website_id))
+        await execute_sql(sql,psycopg2.Binary(mhtml_content_pc),
+                          psycopg2.Binary(mhtml_content_iphone),
+                          psycopg2.Binary(mhtml_content_android),
+                          website_id)
 
         # 現在の日時とハッシュ値を使ってファイル名を生成
         now = datetime.now()
@@ -171,13 +172,16 @@ async def process_website(destination, semaphore, progress_tracker):
         WHERE id = $5
         """
         await execute_sql(sql, screenshot_availability, screenshot_iphone if screenshot_iphone_success else None, screenshot_android if screenshot_android_success else None, screenshot_chrome if screenshot_chrome_success else None, website_id)
+
+
     else:
-        # HTMLコンテンツが取得できなかった場合、ステータスを98に更新
+        # MHTMLコンテンツが取得できなかった場合、ステータスを98に更新
         await execute_sql("UPDATE website_data SET status = 98 WHERE id = $1", website_id)
     
     # 進捗を更新
     progress_tracker['completed'] += 1
     print(f"Progress: {progress_tracker['completed']}/{progress_tracker['total']} websites processed.")
+    print(mhtml_content_pc)
 
 # メイン関数
 async def main():
@@ -203,3 +207,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
