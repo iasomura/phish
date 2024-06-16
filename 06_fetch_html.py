@@ -97,7 +97,7 @@ async def fetch_website(url, user_agent):
     return html_content, redirect_url
 
 # ウェブサイトのスクリーンショットを取得する関数
-async def capture_screenshot(url, user_agent, filename):
+async def capture_screenshot(url, user_agent, filename, timeout=180):
     try:
         # Pyppeteerでブラウザを起動
         browser = await launch(headless=True, args=['--no-sandbox'])
@@ -105,11 +105,14 @@ async def capture_screenshot(url, user_agent, filename):
         # ユーザーエージェントを設定
         await page.setUserAgent(user_agent)
         # 指定されたURLに移動
-        await page.goto(url)
+        await asyncio.wait_for(page.goto(url), timeout=timeout)
         # ページ全体のスクリーンショットを取得
-        await page.screenshot({'path': filename, 'fullPage': True})
+        await asyncio.wait_for(page.screenshot({'path': filename, 'fullPage': True}), timeout=timeout)
         logging.info(f"Full page screenshot saved to {filename}")
         return True
+    except asyncio.TimeoutError:
+        logging.error(f"Timeout while capturing full page screenshot for {url}")
+        return False
     except Exception as e:
         logging.error(f"Failed to capture full page screenshot: {e}")
         return False
