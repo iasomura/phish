@@ -1,0 +1,182 @@
+import os
+import asyncpg
+import json
+import logging
+import ssl
+import OpenSSL.crypto
+import subprocess
+import aiohttp
+import asyncio
+from datetime import datetime
+
+# ログの設定
+log_file = os.path.join(os.path.dirname(__file__), '07_error.log')
+logging.basicConfig(filename=log_file, level=logging.DEBUG)  # DEBUGレベルに変更
+
+# 設定ファイルの読み込み
+config_file = os.path.join(os.path.dirname(__file__), 'config.json')
+with open(config_file, 'r') as f:
+    config = json.load(f)
+
+db_host = config['database']['host']
+db_name = config['database']['name']
+db_user = config['database']['user']
+db_password = config['database']['password']
+
+# ユーザーエージェントの設定
+user_agents = {
+    'Chrome': config['Chrome'],
+    'Android': config['Android'],
+    'iPhone': config['iPhone']
+}
+
+# リダイレクトの最大追跡回数
+MAX_REDIRECTS = 10
+
+# 非同期でSQLを実行する関数
+async def execute_sql(sql, *params):
+    conn = None
+    try:
+        conn = await asyncpg.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        await conn.execute(sql, *params)
+        logging.info(f"{datetime.now().isoformat()} - Executed SQL: {sql} with params: {params}")
+    except Exception as error:
+        logging.error(f"{datetime.now().isoformat()} - Database Error: {str(error)}")
+    finally:
+        if conn:
+            await conn.close()
+
+# 非同期でウェブサイトのHTMLコンテンツを取得する関数
+async def fetch_website(url, user_agent):
+    headers = {'User-Agent': user_agent}
+    html_content = None
+    redirects = 0
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            while redirects <= MAX_REDIRECTS:
+                async with session.get(url, headers=headers, allow_redirects=False) as response:
+                    if response.status in (301, 302, 303, 307, 308):
+                        url = response.headers['Location']
+                        redirects += 1
+                    else:
+                        html_content = await response.text()
+                        break
+            if redirects > MAX_REDIRECTS:
+                logging.error(f"{datetime.now().isoformat()} - Too many redirects: {url}")
+    except aiohttp.ClientError as e:
+        logging.error(f"{datetime.now().isoformat()} - HTTP Error: {str(e)} - {url}")
+    except Exception as e:
+        logging.error(f"{datetime.now().isoformat()} - Error in fetch_website function: {str(e)} - {url}")
+
+    return html_content
+
+# 非同期でSSL証明書情報を取得する関数
+async def get_ssl_certificate_info(domain):
+    try:
+        target_url = f"{domain}:443"
+        openssl_cmd = f"openssl s_client -connect {target_url} -showcerts"
+        openssl_output = await asyncio.to_thread(subprocess.check_output, openssl_cmd, shell=True, text=True, timeout=10, stdin=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+        cert = await asyncio.to_thread(ssl.get_server_certificate, (domain, 443))
+        x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+
+        domain = x509.get_subject().CN
+        issuer = x509.get_issuer().CN
+        expiry_date = x509.get_notAfter().decode('utf-8')
+        public_key = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, x509.get_pubkey()).decode('utf-8')
+        signature_algorithm = x509.get_signature_algorithm().decode('utf-8')
+        extensions = [x509.get_extension(i).get_short_name().decode('utf-8') for i in range(x509.get_extension_count())]
+
+        return {
+            'https_certficate_all': openssl_output,
+            'cert': cert,
+            'domain': domain,
+            'issuer': issuer,
+            'expiry_date': expiry_date,
+            'public_key': public_key,
+            'signature_algorithm': signature_algorithm,
+            'extensions': extensions
+        }
+    except Exception as e:
+        logging.error(f"{datetime.now().isoformat()} - SSL Certificate Error: {str(e)} - {domain}")
+        return None
+
+# 非同期で取得したSSL証明書情報をデータベースに保存する関数
+async def save_ssl_certificate_info(website_id, domain, certificate_info):
+    sql = """
+        UPDATE website_data SET 
+        https_certificate_date = NOW(), 
+        https_certificate_all = $1, 
+        https_certificate_body = $2, 
+        https_certificate_domain = $3, 
+        https_certificate_issuer = $4, 
+        https_certificate_expiry = $5, 
+        https_certificate_public_key = $6, 
+        https_certificate_signature_algorithm = $7, 
+        https_certificate_extensions = $8,
+        status = 7
+        WHERE id = $9
+    """
+    await execute_sql(sql, 
+                      certificate_info['https_certficate_all'],
+                      certificate_info['cert'],
+                      certificate_info['domain'],
+                      certificate_info['issuer'],
+                      certificate_info['expiry_date'],
+                      certificate_info['public_key'],
+                      certificate_info['signature_algorithm'],
+                      json.dumps(certificate_info['extensions']),
+                      website_id)
+
+# 非同期で各ウェブサイトを処理する関数
+async def process_website(website_id, domain, target_url, mobile_target_url, user_agent, progress):
+    await fetch_website(target_url, user_agent)
+    await fetch_website(mobile_target_url, user_agent)
+    
+    ssl_certificate_info = await get_ssl_certificate_info(domain)
+    if ssl_certificate_info:
+        await save_ssl_certificate_info(website_id, domain, ssl_certificate_info)
+    
+    # 進捗を更新
+    async with progress['lock']:
+        progress['completed'] += 1
+        print(f"Progress: {progress['completed']}/{progress['total']} websites processed.")
+
+# 非同期でウェブサイトデータの取得と処理を行う関数
+async def get_website_data(user_agent):
+    try:
+        conn = await asyncpg.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        records = await conn.fetch("SELECT id, domain, url, url_pc_site, url_mobile_site FROM website_data WHERE status = 6 AND (url IS NOT NULL OR url_pc_site IS NOT NULL OR (domain IS NOT NULL AND ip_address IS NOT NULL))")
+        total_destinations = len(records)
+        print(f"Total destinations: {total_destinations}")
+
+        progress = {
+            'total': total_destinations,
+            'completed': 0,
+            'lock': asyncio.Lock()
+        }
+
+        tasks = []
+        for i, record in enumerate(records, start=1):
+            website_id, domain, url, url_pc_site, url_mobile_site = record
+            print(f"Processing destination {i}/{total_destinations}: {domain}")
+
+            target_url = url or url_pc_site or f"https://{domain}"
+            mobile_target_url = url_mobile_site or url or f"http://{domain}"
+
+            tasks.append(process_website(website_id, domain, target_url, mobile_target_url, user_agent, progress))
+
+        await asyncio.gather(*tasks)
+
+        await conn.close()
+    except (Exception, asyncpg.PostgresError) as error:
+        logging.error(f"{datetime.now().isoformat()} - Error in get_website_data function: {str(error)}")
+
+# メイン関数
+async def main():
+    user_agent = user_agents['Chrome']
+    await get_website_data(user_agent)
+
+if __name__ == "__main__":
+    asyncio.run(main())

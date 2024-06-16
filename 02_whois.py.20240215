@@ -1,0 +1,93 @@
+import threading
+import queue
+import subprocess
+import psycopg2
+import re
+
+# データベース接続情報
+DB_HOST = "localhost"
+DB_NAME = "website_data"
+DB_USER = "postgres"
+DB_PASSWORD = "asomura"
+
+# データベースに接続
+conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+cur = conn.cursor()
+
+# キューに格納するドメイン情報
+domain_queue = queue.Queue()
+
+# whoisコマンドを実行して情報を取得する関数
+def get_whois_info(domain):
+    try:
+        # whoisコマンドを実行して結果を取得
+        result = subprocess.run(["whois", domain], capture_output=True, text=True)
+        whois_output = result.stdout
+
+        # NOTICE のみの場合は何も返さず終了
+        if "NOTICE" in whois_output:
+            return None, None, None, None, None
+
+        # 必要な情報を抽出
+        domain_registrar = re.search(r'Registrar:\s*(.+)', whois_output, re.IGNORECASE)
+        domain_registrar = domain_registrar.group(1).strip() if domain_registrar else None
+
+        registrant_name = re.search(r'Registrant Name:\s*(.+)', whois_output, re.IGNORECASE)
+        registrant_name = registrant_name.group(1).strip() if registrant_name else None
+
+        admin_name = re.search(r'Admin Name:\s*(.+)', whois_output, re.IGNORECASE)
+        admin_name = admin_name.group(1).strip() if admin_name else None
+
+        tech_name = re.search(r'Tech Name:\s*(.+)', whois_output, re.IGNORECASE)
+        tech_name = tech_name.group(1).strip() if tech_name else None
+
+        return whois_output, domain_registrar, registrant_name, admin_name, tech_name
+    except Exception as e:
+        print(f"Error getting whois info for domain {domain}: {e}")
+        return None, None, None, None, None
+
+# ドメインのスレッド処理
+def process_domain():
+    while True:
+        domain_status, domain = domain_queue.get()
+        if domain_status == "NOERROR":
+            try:
+                # whois情報を取得
+                whois_info, domain_registrar, registrant_name, admin_name, tech_name = get_whois_info(domain)
+                # whois情報が存在しない場合は何もしない
+                if whois_info is None:
+                    domain_queue.task_done()
+                    continue
+                # データベースに格納
+                cur.execute("""
+                    UPDATE website_data
+                    SET whois_domain = %s, domain_registrar = %s, registrant_name = %s, admin_name = %s, tech_name = %s
+                    WHERE domain = %s
+                """, (whois_info, domain_registrar, registrant_name, admin_name, tech_name, domain))
+                conn.commit()
+                print(f"Processed domain: {domain}")
+            except Exception as e:
+                print(f"Error processing domain {domain}: {e}")
+        domain_queue.task_done()
+
+# スレッド数
+NUM_THREADS = 10
+
+# スレッド開始
+for _ in range(NUM_THREADS):
+    t = threading.Thread(target=process_domain)
+    t.daemon = True
+    t.start()
+
+# domain_statusが"NOERROR"のドメインをキューに追加
+cur.execute("SELECT domain_status, domain FROM website_data")
+rows = cur.fetchall()
+for row in rows:
+    domain_queue.put(row)
+
+# メインスレッドがキューの処理を待つ
+domain_queue.join()
+
+# データベース接続を閉じる
+cur.close()
+conn.close()

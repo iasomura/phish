@@ -1,0 +1,64 @@
+import psycopg2
+import re
+import requests
+
+# データベースに接続
+#conn = psycopg2.connect("dbname=website_data user=postgres password=asomura")
+# データベース接続情報
+DB_HOST = 'localhost'
+DB_NAME = 'website_data'
+DB_USER = 'postgres'
+DB_PASSWORD = 'asomura'
+conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+cur = conn.cursor()
+
+# ip_addressのデータがIPアドレスの形式であることを確認し、形式違反のデータをNULLに設定
+cur.execute("""
+    UPDATE website_data 
+    SET ip_address = NULL
+    WHERE ip_address !~ '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'
+""")
+
+# ip_addressがIPアドレスの形式で、ip_infoがNULLの場合にip-api.comからデータを取得して更新
+cur.execute("""
+    SELECT id, ip_address 
+    FROM website_data
+    WHERE ip_address IS NOT NULL
+    AND ip_info IS NULL
+""")
+
+rows = cur.fetchall()
+for row in rows:
+    id, ip_address = row
+
+    # ip-api.comからデータを取得
+
+    url = f"http://ip-api.com/json/{ip_address}"
+    print(url)
+    response = requests.get(url).json()
+
+    if response["status"] == "success":
+        ip_info = str(response)
+        org = response["org"]
+        isp = response["isp"]
+        country = response["country"]
+        print(isp)
+        print(country)
+        
+        # データを更新
+        update_query = """
+            UPDATE website_data
+            SET last_update = now(),
+                status = 4,
+                ip_info = %s,
+                ip_retrieval_date = now(),
+                ip_organization = %s,
+                hosting_provider = %s,
+                ip_location = %s
+            WHERE id = %s
+        """
+        cur.execute(update_query, (ip_info, org, isp, country, id))
+
+conn.commit()
+cur.close()
+conn.close()

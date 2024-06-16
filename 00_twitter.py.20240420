@@ -1,0 +1,26 @@
+import tweepy
+
+# Twitter APIキーとトークン
+consumer_key = 'rrnY1WHOOFRdDfKkCyNTju2wJ'
+consumer_secret = 'PByxtCR9SIDYCVVTfw8fCS3NOSm3HEhOQ5xtxDCRy0n7pQg9CA'
+access_token = '1346756863862349826-8Db7AmK4p0EkE6VlaL3c5Jd4ABRHwI'
+access_token_secret = 'kO9od6AutTaEqbVB6YOcWDIyvrQUPrz1WBs3761Oh7yJs'
+
+# Twitter APIにアクセス
+auth = tweepy.OAuth1UserHandler(consumer_key, consumer_secret, access_token, access_token_secret)
+api = tweepy.API(auth)
+
+# 対象のTwitterアカウント
+twitter_account = 'NaomiSuzuki_'
+
+try:
+    # 最新のツイートを取得
+    tweets = api.user_timeline(screen_name=twitter_account, count=1)
+    for tweet in tweets:
+        # ツイート本文からURLを抽出
+        urls = tweet.entities.get('urls')
+        for url in urls:
+            print("URL:", url['expanded_url'])
+
+except Exception as e:
+    print("Error:", e)

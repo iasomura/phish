@@ -1,0 +1,105 @@
+import re
+import subprocess
+import psycopg2
+import threading
+from queue import Queue
+
+# PostgreSQLへの接続情報
+DB_NAME = "website_data"
+DB_USER = "postgres"
+DB_PASSWORD = "asomura"
+DB_HOST = "localhost"
+DB_PORT = "5432"
+
+# ワーカースレッド数
+NUM_THREADS = 10
+
+# タスクキュー
+task_queue = Queue()
+
+# PostgreSQLへの接続
+conn = psycopg2.connect(
+    dbname=DB_NAME,
+    user=DB_USER,
+    password=DB_PASSWORD,
+    host=DB_HOST,
+    port=DB_PORT
+)
+
+# データベースカーソルの作成
+cur = conn.cursor()
+
+# タスク実行関数
+def process_task():
+    while True:
+        domain_name = task_queue.get()
+        if domain_name is None:
+            break
+        
+        try:
+            # Aレコードの取得
+            a_result = subprocess.run(["dig", "+noall", "+answer", domain_name, "A"], capture_output=True, text=True)
+            dig_info_a = a_result.stdout
+
+            # MXレコードの取得
+            mx_result = subprocess.run(["dig", "+noall", "+answer", domain_name, "MX"], capture_output=True, text=True)
+            dig_info_mx = mx_result.stdout
+
+            # NSレコードの取得
+            ns_result = subprocess.run(["dig", "+noall", "+answer", domain_name, "NS"], capture_output=True, text=True)
+            dig_info_ns = ns_result.stdout
+
+            # TTLの取得
+
+            #ttl_pattern = re.compile(r'\bTTL\b\s*(\d+)')
+            ttl_pattern = re.compile(r'\b\d+\b')
+
+            a_ttl = int(ttl_pattern.search(dig_info_a).group(1)) if ttl_pattern.search(dig_info_a) else None
+            mx_ttl = int(ttl_pattern.search(dig_info_mx).group(1)) if ttl_pattern.search(dig_info_mx) else None
+            ns_ttl = int(ttl_pattern.search(dig_info_ns).group(1)) if ttl_pattern.search(dig_info_ns) else None
+
+            # 取得した情報をデータベースに格納
+            cur.execute("UPDATE website_data SET dig_info_A = %s, dig_info_MX = %s, dig_info_NS = %s, dig_info_TTL_A = %s, dig_info_TTL_MX = %s, dig_info_TTL_NS = %s WHERE domain = %s",
+                        (dig_info_a, dig_info_mx, dig_info_ns, a_ttl, mx_ttl, ns_ttl, domain_name))
+            conn.commit()
+
+            print(f"{domain_name} のデータの更新が完了しました。")
+
+        except Exception as e:
+            print(f"エラーが発生しました: {e}")
+
+        finally:
+            task_queue.task_done()
+
+# ワーカースレッドの作成と開始
+threads = []
+for _ in range(NUM_THREADS):
+    t = threading.Thread(target=process_task)
+    t.start()
+    threads.append(t)
+
+try:
+    # domain_statusがNOERRORかつwhois_domainがNULLでないレコードを取得
+    cur.execute("SELECT domain FROM website_data WHERE domain_status = 'NOERROR' AND whois_domain IS NOT NULL")
+    domains = cur.fetchall()
+
+    # タスクキューにドメインを追加
+    for domain in domains:
+        task_queue.put(domain[0])
+
+    # 全てのタスクの完了を待つ
+    task_queue.join()
+
+except psycopg2.Error as e:
+    print("データベースエラー:", e)
+
+finally:
+    # ワーカースレッドの終了を待つ
+    for _ in range(NUM_THREADS):
+        task_queue.put(None)
+    for t in threads:
+        t.join()
+
+    # データベース接続を閉じる
+    cur.close()
+    conn.close()

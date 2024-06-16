@@ -1,0 +1,77 @@
+import subprocess
+import psycopg2
+
+# データベース接続情報
+db_host = 'localhost'
+db_name = 'website_data'
+db_user = 'postgres'
+db_password = 'asomura'
+
+def execute_command(command):
+    """
+    コマンドを実行し、出力を返すヘルパー関数
+    """
+    process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+    return output.decode("utf-8")
+
+def update_website_data(connection):
+    """
+    ウェブサイトデータを更新する関数
+    """
+    cursor = connection.cursor()
+    try:
+        # 条件に基づいてウェブサイトデータを取得
+        cursor.execute("SELECT id, domain FROM website_data WHERE domain_status = 'NOERROR'")
+        websites = cursor.fetchall()
+        total_websites = len(websites)
+        processed_websites = 0
+
+        for website in websites:
+            website_id, domain = website
+            # Aレコードを調べ、結果をdig_info_A TEXTに格納する
+            dig_info_A = execute_command(f"dig +noall +answer {domain} A")
+            # TTLの値を取得してdig_info_TTL_Aに格納する
+            dig_info_TTL_A = None
+            if dig_info_A.strip():
+                ttl_values = [int(line.split()[1]) for line in dig_info_A.split('\n') if line.strip()]
+                if ttl_values:
+                    dig_info_TTL_A = min(ttl_values)
+
+            # MXレコードを調べ、結果をdig_info_MX TEXTに格納する
+            dig_info_MX = execute_command(f"dig +noall +answer {domain} MX")
+
+            # NSレコードを調べ、結果をdig_info_NS TEXTに格納する
+            dig_info_NS = execute_command(f"dig +noall +answer {domain} NS")
+
+            # データベースを更新する
+            cursor.execute("UPDATE website_data SET dig_info_A = %s, dig_info_TTL_A = %s, dig_info_MX = %s, dig_info_NS = %s WHERE id = %s",
+                           (dig_info_A, dig_info_TTL_A, dig_info_MX, dig_info_NS, website_id))
+            
+            # 処理進捗を表示
+            processed_websites += 1
+            print(f"進捗: {processed_websites}/{total_websites}", end="\r")
+        
+        # トランザクションをコミット
+        connection.commit()
+        print("\nウェブサイトデータが正常に更新されました。")
+
+    except Exception as e:
+        # エラーが発生した場合はロールバック
+        connection.rollback()
+        print("エラーが発生しました:", e)
+
+    finally:
+        # カーソルとコネクションをクローズ
+        cursor.close()
+
+if __name__ == "__main__":
+    # PostgreSQLデータベースに接続
+    try:
+        connection = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        update_website_data(connection)
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+    finally:
+        if 'connection' in locals():
+            connection.close()

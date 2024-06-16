@@ -1,0 +1,447 @@
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa07dd93220>
+transport: <_SelectorSocketTransport closing fd=22>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa07dd85df0>
+transport: <_SelectorSocketTransport closing fd=24>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa0807ed3a0>
+transport: <_SelectorSocketTransport closing fd=25>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa07dda78b0>
+transport: <_SelectorSocketTransport closing fd=15>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa0807f8970>
+transport: <_SelectorSocketTransport closing fd=23>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa07c566100>
+transport: <_SelectorSocketTransport closing fd=27>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa07dda7ee0>
+transport: <_SelectorSocketTransport closing fd=12>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa07c566b20>
+transport: <_SelectorSocketTransport closing fd=20>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa07dda7d00>
+transport: <_SelectorSocketTransport closing fd=17>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fa07dda7a60>
+transport: <_SelectorSocketTransport closing fd=26>
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/client.py", line 608, in _request
+    await resp.start(conn)
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 918, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/sslproto.py", line 684, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 924, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 719, in _fatal_error
+    self._force_close(exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/selector_events.py", line 731, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 746, in call_soon
+    self._check_closed()
+  File "/home/asomura/anaconda3/lib/python3.9/asyncio/base_events.py", line 510, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:asyncio:Task was destroyed but it is pending!
+task: <Task pending name='Task-33672' coro=<TCPConnector._resolve_host_with_throttle() running at /home/asomura/anaconda3/lib/python3.9/site-packages/aiohttp/connector.py:917> wait_for=<Future pending cb=[_chain_future.<locals>._call_check_cancel() at /home/asomura/anaconda3/lib/python3.9/asyncio/futures.py:384, <TaskWakeupMethWrapper object at 0x7fa07ddac8e0>()]> cb=[shield.<locals>._inner_done_callback() at /home/asomura/anaconda3/lib/python3.9/asyncio/tasks.py:888]>
+ERROR:root:2024-05-19T14:45:14.638819 - HTTP Error: Cannot connect to host cqevi.net:443 ssl:default [Name or service not known] - https://cqevi.net/wAjuJ7
+ERROR:root:2024-05-19T14:45:14.784887 - HTTP Error: Cannot connect to host identificadorviaverde.org:80 ssl:default [Name or service not known] - http://identificadorviaverde.org
+ERROR:root:2024-05-19T14:45:17.063095 - HTTP Error: Cannot connect to host gsgt.pages.dev:80 ssl:default [Name or service not known] - http://gsgt.pages.dev
+ERROR:root:2024-05-19T14:45:18.932740 - HTTP Error: Cannot connect to host rectifyaumain.pages.dev:80 ssl:default [Name or service not known] - http://rectifyaumain.pages.dev
+ERROR:root:2024-05-19T14:45:19.647286 - HTTP Error: Cannot connect to host www.cxjmyz.com:443 ssl:default [Name or service not known] - https://www.cxjmyz.com
+ERROR:root:2024-05-19T14:45:20.485293 - HTTP Error: /nBsSoZ/ - /nBsSoZ/
+ERROR:root:2024-05-19T14:45:22.108352 - HTTP Error: /nBsSoZ/ - /nBsSoZ/
+ERROR:root:2024-05-19T14:45:22.758407 - HTTP Error: Cannot connect to host www.zydfbj.com:443 ssl:default [Name or service not known] - https://www.zydfbj.com
+ERROR:root:2024-05-19T14:45:25.614921 - HTTP Error: Cannot connect to host 8c7gb3n1.duckdns.org:443 ssl:default [Connection reset by peer] - https://8c7gb3n1.duckdns.org
+ERROR:root:2024-05-19T14:45:26.059004 - HTTP Error: /bls1_yWEJNeoHTs9fEbG1O1eCu8CAIiXP6SEF?token1=yWEJNeoHTs9fEbG1O1eCu8CAIiXP6SEF - /bls1_yWEJNeoHTs9fEbG1O1eCu8CAIiXP6SEF?token1=yWEJNeoHTs9fEbG1O1eCu8CAIiXP6SEF
+ERROR:root:2024-05-19T14:45:26.620393 - HTTP Error: /Xapz.php - /Xapz.php
+ERROR:root:2024-05-19T14:45:26.878670 - HTTP Error: Cannot connect to host telegrcanm.work:80 ssl:default [Name or service not known] - http://telegrcanm.work
+ERROR:root:2024-05-19T14:45:27.302671 - HTTP Error: Cannot connect to host 5aa684773.duckdns.org:443 ssl:default [Connection reset by peer] - https://5aa684773.duckdns.org
+ERROR:root:2024-05-19T14:45:27.379387 - HTTP Error: / - /
+ERROR:root:2024-05-19T14:45:27.451706 - HTTP Error: Cannot connect to host cn12144.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cn12144.tw1.ru'. (_ssl.c:1129)")] - https://cn12144.tw1.ru/sff/
+ERROR:root:2024-05-19T14:45:27.501037 - HTTP Error: / - /
+ERROR:root:2024-05-19T14:45:27.681620 - HTTP Error: /nBsSoZ/ - /nBsSoZ/
+ERROR:root:2024-05-19T14:45:28.254478 - HTTP Error: Cannot connect to host bemnc6x.duckdns.org:443 ssl:default [Connection reset by peer] - https://bemnc6x.duckdns.org
+ERROR:root:2024-05-19T14:45:28.698857 - HTTP Error: Cannot connect to host joeruark.com:443 ssl:default [[SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1129)] - https://joeruark.com/
+ERROR:root:2024-05-19T14:45:29.131381 - HTTP Error: Cannot connect to host www.gxqhr.com:443 ssl:default [Name or service not known] - https://www.gxqhr.com
+ERROR:root:2024-05-19T14:45:30.115751 - HTTP Error: home - home
+ERROR:root:2024-05-19T14:45:32.908774 - HTTP Error: /bls1_FpCcQzJ4lbmau8rC5uT6aYkU5dokkw30?token1=FpCcQzJ4lbmau8rC5uT6aYkU5dokkw30 - /bls1_FpCcQzJ4lbmau8rC5uT6aYkU5dokkw30?token1=FpCcQzJ4lbmau8rC5uT6aYkU5dokkw30
+ERROR:root:2024-05-19T14:45:33.372449 - HTTP Error: close.html - close.html
+ERROR:root:2024-05-19T14:45:33.953834 - HTTP Error: home - home
+ERROR:root:2024-05-19T14:45:35.599929 - HTTP Error: /bls1_2ZJvnuDVOsnxEJIPV56ZuDbSa4gamXkT?token1=2ZJvnuDVOsnxEJIPV56ZuDbSa4gamXkT - /bls1_2ZJvnuDVOsnxEJIPV56ZuDbSa4gamXkT?token1=2ZJvnuDVOsnxEJIPV56ZuDbSa4gamXkT
+ERROR:root:2024-05-19T14:45:37.143197 - HTTP Error: Cannot connect to host juno-message-center-104267.weeblysite.com:443 ssl:default [Name or service not known] - https://juno-message-center-104267.weeblysite.com/
+ERROR:root:2024-05-19T14:45:44.861105 - HTTP Error: Cannot connect to host acessobr4depleto.shop:80 ssl:default [Name or service not known] - http://acessobr4depleto.shop/
+ERROR:root:2024-05-19T14:45:45.362128 - HTTP Error: Cannot connect to host portalsegurancacaixadirecta.interfireseg.com.br:443 ssl:default [Name or service not known] - https://portalsegurancacaixadirecta.interfireseg.com.br/login.php
+ERROR:root:2024-05-19T14:45:46.560214 - HTTP Error: Cannot connect to host bzdsklou.web.app:443 ssl:default [Name or service not known] - https://bzdsklou.web.app/
+ERROR:root:2024-05-19T14:45:47.509496 - HTTP Error: /nBsSoZ/ - /nBsSoZ/
+ERROR:root:2024-05-19T14:45:48.262454 - HTTP Error: Cannot connect to host inf-5e4.pages.dev:443 ssl:default [Name or service not known] - https://inf-5e4.pages.dev/
+ERROR:root:2024-05-19T14:45:49.859491 - HTTP Error: Cannot connect to host cz13254.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cz13254.tw1.ru'. (_ssl.c:1129)")] - https://cz13254.tw1.ru/sofids/
+ERROR:root:2024-05-19T14:45:52.624265 - HTTP Error: Cannot connect to host decentralizednodes-xyz.pages.dev:443 ssl:default [Name or service not known] - https://decentralizednodes-xyz.pages.dev/
+ERROR:root:2024-05-19T14:45:55.847977 - HTTP Error: Cannot connect to host pub-3fcb1f87ac1c4eb984136f6eb4365987.r2.dev:443 ssl:default [Name or service not known] - https://pub-3fcb1f87ac1c4eb984136f6eb4365987.r2.dev/secure_response.html
+ERROR:root:2024-05-19T14:46:01.081514 - HTTP Error: /we - /we
+ERROR:root:2024-05-19T14:46:04.146906 - HTTP Error: Undefined - Undefined
+ERROR:root:2024-05-19T14:46:06.111484 - HTTP Error: Cannot connect to host vshrg.pages.dev:80 ssl:default [Name or service not known] - http://vshrg.pages.dev
+ERROR:root:2024-05-19T14:46:11.334125 - HTTP Error: / - /
+ERROR:root:2024-05-19T14:46:14.493962 - Error in fetch_website function: 'utf-8' codec can't decode byte 0xf4 in position 8731: invalid continuation byte - http://ahhhh.pe.kr/zb41/data/1057168297/?email=3mail@b.c
+ERROR:root:2024-05-19T14:46:14.610329 - HTTP Error: Cannot connect to host sde-b9l.pages.dev:443 ssl:default [Name or service not known] - https://sde-b9l.pages.dev/
+ERROR:root:2024-05-19T14:46:16.064872 - HTTP Error: /_forms/default.aspx?ReturnUrl=/personal/johan_jent_se/_layouts/15/Authenticate.aspx?Source%3D/personal/johan_jent_se/_layouts/15/doc2.aspx?sourcedoc%253D%25257Beec8258f-a831-42dd-be37-a7186f3b17ee%25257D%2526action%253Ddefault%2526slrid%253D46cb5da0-f097-4000-fa3f-ad6d18add717%2526originalPath%253DaHR0cHM6Ly9qYW5zc29uZW50cmVwcmVuYWRhYi1teS5zaGFyZXBvaW50LmNvbS86bzovZy9wZXJzb25hbC9qb2hhbl9qZW50X3NlL0VvOGx5TzR4cU4xQ3ZqZW5HRzg3Ri00QkZlSWlOWFBjWFp2c0xNcGIydFNpZ3c_cnRpbWU9b1dCNlJfMkUya2c%2526cid%253D5712c764-51dd-4b60-bae5-9412676adf48&Source=cookie - /_forms/default.aspx?ReturnUrl=%2fpersonal%2fjohan_jent_se%2f_layouts%2f15%2fAuthenticate.aspx%3fSource%3d%2fpersonal%2fjohan_jent_se%2f_layouts%2f15%2fdoc2.aspx%3fsourcedoc%253D%25257Beec8258f-a831-42dd-be37-a7186f3b17ee%25257D%2526action%253Ddefault%2526slrid%253D46cb5da0-f097-4000-fa3f-ad6d18add717%2526originalPath%253DaHR0cHM6Ly9qYW5zc29uZW50cmVwcmVuYWRhYi1teS5zaGFyZXBvaW50LmNvbS86bzovZy9wZXJzb25hbC9qb2hhbl9qZW50X3NlL0VvOGx5TzR4cU4xQ3ZqZW5HRzg3Ri00QkZlSWlOWFBjWFp2c0xNcGIydFNpZ3c_cnRpbWU9b1dCNlJfMkUya2c%2526cid%253D5712c764-51dd-4b60-bae5-9412676adf48&Source=cookie
+ERROR:root:2024-05-19T14:46:16.232720 - HTTP Error: login.php - login.php
+ERROR:root:2024-05-19T14:46:17.065238 - HTTP Error: /vincci - /vincci
+ERROR:root:2024-05-19T14:46:17.757304 - HTTP Error: Cannot connect to host logon.glciaspromonline.site:443 ssl:default [Name or service not known] - https://logon.glciaspromonline.site/
+ERROR:root:2024-05-19T14:46:17.954679 - HTTP Error: Cannot connect to host www.allegro-stroe.cyou:443 ssl:default [Name or service not known] - https://www.allegro-stroe.cyou
+ERROR:root:2024-05-19T14:46:22.419214 - HTTP Error: /app/contact/reviewID_bfa873d1bcc0acbbb7bc8a49532094?&XlgUx=hmldx25TPTPf_4V - /app/contact/reviewID_bfa873d1bcc0acbbb7bc8a49532094?&XlgUx=hmldx25TPTPf_4V
+ERROR:root:2024-05-19T14:46:23.152448 - HTTP Error: Cannot connect to host pagamentiaruba.account58956.com:443 ssl:default [Connect call failed ('0.0.0.0', 443)] - https://pagamentiaruba.account58956.com/index.html
+ERROR:root:2024-05-19T14:46:24.611093 - HTTP Error: Cannot connect to host pancakeswapclaim22.vercel.app:80 ssl:default [Name or service not known] - http://pancakeswapclaim22.vercel.app
+ERROR:root:2024-05-19T14:46:24.625833 - HTTP Error: Cannot connect to host webaktualisiert.yolasite.com:443 ssl:default [Name or service not known] - https://webaktualisiert.yolasite.com/
+ERROR:root:2024-05-19T14:46:24.737025 - HTTP Error: Cannot connect to host microsoft-108864.weeblysite.com:443 ssl:default [Name or service not known] - https://microsoft-108864.weeblysite.com/
+ERROR:root:2024-05-19T14:46:26.199977 - HTTP Error: Cannot connect to host peru.buscoayudas.online:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'peru.buscoayudas.online'. (_ssl.c:1129)")] - https://peru.buscoayudas.online/prestamos-en-pichincha/
+ERROR:root:2024-05-19T14:46:26.715545 - HTTP Error: Cannot connect to host cz80489.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cz80489.tw1.ru'. (_ssl.c:1129)")] - https://cz80489.tw1.ru//sofids/
+ERROR:root:2024-05-19T14:46:30.247357 - HTTP Error: Cannot connect to host user.my-ufi.com:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'user.my-ufi.com'. (_ssl.c:1129)")] - https://user.my-ufi.com/
+ERROR:root:2024-05-19T14:46:31.071636 - HTTP Error: Server disconnected - https://facturation-espaceclientprorange-fr-facturation.codeanyapp.com/fr/
+ERROR:root:2024-05-19T14:46:31.393900 - HTTP Error: Cannot connect to host aeno.co.jp.lesikkuy.cn:443 ssl:default [Name or service not known] - https://aeno.co.jp.lesikkuy.cn/aeon
+ERROR:root:2024-05-19T14:46:33.132262 - HTTP Error: Cannot connect to host jhdhayz.com:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'jhdhayz.com'. (_ssl.c:1129)")] - https://jhdhayz.com
+ERROR:root:2024-05-19T14:46:33.946236 - HTTP Error: login.php - login.php
+ERROR:root:2024-05-19T14:46:34.641688 - HTTP Error: Cannot connect to host cd37663.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cd37663.tw1.ru'. (_ssl.c:1129)")] - https://cd37663.tw1.ru/sofids/
+ERROR:root:2024-05-19T14:50:48.226045 - HTTP Error: Cannot connect to host cqevi.net:443 ssl:default [Name or service not known] - https://cqevi.net/wAjuJ7
+ERROR:root:2024-05-19T14:50:48.376459 - HTTP Error: Cannot connect to host identificadorviaverde.org:80 ssl:default [Name or service not known] - http://identificadorviaverde.org
+ERROR:root:2024-05-19T14:50:48.763095 - HTTP Error: Cannot connect to host gsgt.pages.dev:80 ssl:default [Name or service not known] - http://gsgt.pages.dev
+ERROR:root:2024-05-19T14:50:50.122803 - HTTP Error: Cannot connect to host rectifyaumain.pages.dev:80 ssl:default [Name or service not known] - http://rectifyaumain.pages.dev
+ERROR:root:2024-05-19T14:50:50.174401 - HTTP Error: Cannot connect to host www.cxjmyz.com:443 ssl:default [Name or service not known] - https://www.cxjmyz.com
+ERROR:root:2024-05-19T14:50:51.558933 - HTTP Error: /nBsSoZ/ - /nBsSoZ/
+ERROR:root:2024-05-19T14:50:55.140094 - HTTP Error: /nBsSoZ/ - /nBsSoZ/
+ERROR:root:2024-05-19T14:50:55.940439 - HTTP Error: Cannot connect to host www.zydfbj.com:443 ssl:default [Name or service not known] - https://www.zydfbj.com
+ERROR:root:2024-05-19T14:50:57.637282 - HTTP Error: Cannot connect to host 8c7gb3n1.duckdns.org:443 ssl:default [Connection reset by peer] - https://8c7gb3n1.duckdns.org
+ERROR:root:2024-05-19T14:50:58.091131 - HTTP Error: /bls1_EV5nEGY9JL3kOM7VkLZ4cNeI80bMrNqK?token1=EV5nEGY9JL3kOM7VkLZ4cNeI80bMrNqK - /bls1_EV5nEGY9JL3kOM7VkLZ4cNeI80bMrNqK?token1=EV5nEGY9JL3kOM7VkLZ4cNeI80bMrNqK
+ERROR:root:2024-05-19T14:50:58.167858 - HTTP Error: /Xapz.php - /Xapz.php
+ERROR:root:2024-05-19T14:50:58.440799 - HTTP Error: Cannot connect to host cn12144.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cn12144.tw1.ru'. (_ssl.c:1129)")] - https://cn12144.tw1.ru/sff/
+ERROR:root:2024-05-19T14:50:58.878977 - HTTP Error: Cannot connect to host bemnc6x.duckdns.org:443 ssl:default [Connection reset by peer] - https://bemnc6x.duckdns.org
+ERROR:root:2024-05-19T14:50:58.905523 - HTTP Error: Cannot connect to host telegrcanm.work:80 ssl:default [Name or service not known] - http://telegrcanm.work
+ERROR:root:2024-05-19T14:50:59.053875 - HTTP Error: Cannot connect to host 5aa684773.duckdns.org:443 ssl:default [Connection reset by peer] - https://5aa684773.duckdns.org
+ERROR:root:2024-05-19T14:50:59.577239 - HTTP Error: / - /
+ERROR:root:2024-05-19T14:51:00.002053 - HTTP Error: /nBsSoZ/ - /nBsSoZ/
+ERROR:root:2024-05-19T14:51:00.502522 - HTTP Error: / - /
+ERROR:root:2024-05-19T14:51:02.353940 - HTTP Error: Cannot connect to host joeruark.com:443 ssl:default [[SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1129)] - https://joeruark.com/
+ERROR:root:2024-05-19T14:51:03.576884 - HTTP Error: Cannot connect to host www.gxqhr.com:443 ssl:default [Name or service not known] - https://www.gxqhr.com
+ERROR:root:2024-05-19T14:51:04.342102 - HTTP Error: home - home
+ERROR:root:2024-05-19T14:51:09.746031 - HTTP Error: close.html - close.html
+ERROR:root:2024-05-19T14:51:09.984770 - HTTP Error: home - home
+ERROR:root:2024-05-19T14:51:10.340617 - HTTP Error: /bls1_Ucscuz5y3THMEop54LkFgLqMdXDlx6DH?token1=Ucscuz5y3THMEop54LkFgLqMdXDlx6DH - /bls1_Ucscuz5y3THMEop54LkFgLqMdXDlx6DH?token1=Ucscuz5y3THMEop54LkFgLqMdXDlx6DH
+ERROR:root:2024-05-19T14:51:13.167490 - HTTP Error: /bls1_tcMzwTL1oWSxcIMPj4P9IUF7ALPp8fJ4?token1=tcMzwTL1oWSxcIMPj4P9IUF7ALPp8fJ4 - /bls1_tcMzwTL1oWSxcIMPj4P9IUF7ALPp8fJ4?token1=tcMzwTL1oWSxcIMPj4P9IUF7ALPp8fJ4
+ERROR:root:2024-05-19T14:51:17.200803 - HTTP Error: /nBsSoZ/ - /nBsSoZ/
+ERROR:root:2024-05-19T14:51:21.312299 - HTTP Error: Cannot connect to host acessobr4depleto.shop:80 ssl:default [Name or service not known] - http://acessobr4depleto.shop/
+ERROR:root:2024-05-19T14:51:21.316571 - HTTP Error: Cannot connect to host portalsegurancacaixadirecta.interfireseg.com.br:443 ssl:default [Name or service not known] - https://portalsegurancacaixadirecta.interfireseg.com.br/login.php
+ERROR:root:2024-05-19T14:51:27.062407 - HTTP Error: Cannot connect to host inf-5e4.pages.dev:443 ssl:default [Name or service not known] - https://inf-5e4.pages.dev/
+ERROR:root:2024-05-19T14:51:28.089530 - HTTP Error: Cannot connect to host cz13254.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cz13254.tw1.ru'. (_ssl.c:1129)")] - https://cz13254.tw1.ru/sofids/
+ERROR:root:2024-05-19T14:51:28.878585 - HTTP Error: Cannot connect to host decentralizednodes-xyz.pages.dev:443 ssl:default [Name or service not known] - https://decentralizednodes-xyz.pages.dev/
+ERROR:root:2024-05-19T14:51:37.977233 - HTTP Error: /we - /we
+ERROR:root:2024-05-19T14:51:42.905121 - HTTP Error: / - /
+ERROR:root:2024-05-19T14:51:44.307358 - HTTP Error: Cannot connect to host vshrg.pages.dev:80 ssl:default [Name or service not known] - http://vshrg.pages.dev
+ERROR:root:2024-05-19T14:51:45.901639 - HTTP Error: Undefined - Undefined
+ERROR:root:2024-05-19T14:51:47.767354 - Error in fetch_website function: 'utf-8' codec can't decode byte 0xf4 in position 8731: invalid continuation byte - http://ahhhh.pe.kr/zb41/data/1057168297/?email=3mail@b.c
+ERROR:root:2024-05-19T14:51:48.322223 - HTTP Error: Cannot connect to host sde-b9l.pages.dev:443 ssl:default [Name or service not known] - https://sde-b9l.pages.dev/
+ERROR:root:2024-05-19T14:51:48.951053 - HTTP Error: /_forms/default.aspx?ReturnUrl=/personal/johan_jent_se/_layouts/15/Authenticate.aspx?Source%3D/personal/johan_jent_se/_layouts/15/doc2.aspx?sourcedoc%253D%25257Beec8258f-a831-42dd-be37-a7186f3b17ee%25257D%2526action%253Ddefault%2526slrid%253D46cb5da0-f097-4000-fa3f-ad6d18add717%2526originalPath%253DaHR0cHM6Ly9qYW5zc29uZW50cmVwcmVuYWRhYi1teS5zaGFyZXBvaW50LmNvbS86bzovZy9wZXJzb25hbC9qb2hhbl9qZW50X3NlL0VvOGx5TzR4cU4xQ3ZqZW5HRzg3Ri00QkZlSWlOWFBjWFp2c0xNcGIydFNpZ3c_cnRpbWU9b1dCNlJfMkUya2c%2526cid%253D5712c764-51dd-4b60-bae5-9412676adf48&Source=cookie - /_forms/default.aspx?ReturnUrl=%2fpersonal%2fjohan_jent_se%2f_layouts%2f15%2fAuthenticate.aspx%3fSource%3d%2fpersonal%2fjohan_jent_se%2f_layouts%2f15%2fdoc2.aspx%3fsourcedoc%253D%25257Beec8258f-a831-42dd-be37-a7186f3b17ee%25257D%2526action%253Ddefault%2526slrid%253D46cb5da0-f097-4000-fa3f-ad6d18add717%2526originalPath%253DaHR0cHM6Ly9qYW5zc29uZW50cmVwcmVuYWRhYi1teS5zaGFyZXBvaW50LmNvbS86bzovZy9wZXJzb25hbC9qb2hhbl9qZW50X3NlL0VvOGx5TzR4cU4xQ3ZqZW5HRzg3Ri00QkZlSWlOWFBjWFp2c0xNcGIydFNpZ3c_cnRpbWU9b1dCNlJfMkUya2c%2526cid%253D5712c764-51dd-4b60-bae5-9412676adf48&Source=cookie
+ERROR:root:2024-05-19T14:51:49.698296 - HTTP Error: login.php - login.php
+ERROR:root:2024-05-19T14:51:50.431085 - HTTP Error: /vincci - /vincci
+ERROR:root:2024-05-19T14:51:51.846679 - HTTP Error: Cannot connect to host logon.glciaspromonline.site:443 ssl:default [Name or service not known] - https://logon.glciaspromonline.site/
+ERROR:root:2024-05-19T14:51:52.066283 - HTTP Error: Cannot connect to host www.allegro-stroe.cyou:443 ssl:default [Name or service not known] - https://www.allegro-stroe.cyou
+ERROR:root:2024-05-19T14:51:54.781831 - HTTP Error: /app/contact/reviewID_5d8a207815fa14706bc4655fc91490?&fLvLy=nDbmDap751ianI5 - /app/contact/reviewID_5d8a207815fa14706bc4655fc91490?&fLvLy=nDbmDap751ianI5
+ERROR:root:2024-05-19T14:51:55.160103 - HTTP Error: Cannot connect to host pagamentiaruba.account58956.com:443 ssl:default [Connect call failed ('0.0.0.0', 443)] - https://pagamentiaruba.account58956.com/index.html
+ERROR:root:2024-05-19T14:51:57.770458 - HTTP Error: Cannot connect to host peru.buscoayudas.online:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'peru.buscoayudas.online'. (_ssl.c:1129)")] - https://peru.buscoayudas.online/prestamos-en-pichincha/
+ERROR:root:2024-05-19T14:51:58.322554 - HTTP Error: Cannot connect to host cz80489.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cz80489.tw1.ru'. (_ssl.c:1129)")] - https://cz80489.tw1.ru//sofids/
+ERROR:root:2024-05-19T14:52:00.073019 - HTTP Error: Cannot connect to host user.my-ufi.com:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'user.my-ufi.com'. (_ssl.c:1129)")] - https://user.my-ufi.com/
+ERROR:root:2024-05-19T14:52:00.355089 - HTTP Error: Cannot connect to host aeno.co.jp.lesikkuy.cn:443 ssl:default [Name or service not known] - https://aeno.co.jp.lesikkuy.cn/aeon
+ERROR:root:2024-05-19T14:52:00.696413 - HTTP Error: Server disconnected - https://facturation-espaceclientprorange-fr-facturation.codeanyapp.com/fr/
+ERROR:root:2024-05-19T14:52:02.217960 - HTTP Error: Cannot connect to host jhdhayz.com:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'jhdhayz.com'. (_ssl.c:1129)")] - https://jhdhayz.com
+ERROR:root:2024-05-19T14:52:03.674510 - HTTP Error: Cannot connect to host cd37663.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cd37663.tw1.ru'. (_ssl.c:1129)")] - https://cd37663.tw1.ru/sofids/
+ERROR:root:2024-05-19T14:52:04.724362 - HTTP Error: /admin/archived_user.php - /admin/archived_user.php
+ERROR:root:2024-05-19T14:52:06.208297 - HTTP Error: /404 - /404
+ERROR:root:2024-05-19T14:52:06.911083 - HTTP Error: Cannot connect to host declaraciondelosbienesinmuebles.com:443 ssl:default [Name or service not known] - https://declaraciondelosbienesinmuebles.com/formulario/indexbn.html
+ERROR:root:2024-05-19T14:52:07.587075 - HTTP Error: Cannot connect to host 10ea18d.wcomhost.com:443 ssl:default [Connection reset by peer] - https://10ea18d.wcomhost.com/signature.php?code=71+237+049
+ERROR:root:2024-05-19T14:52:07.594619 - HTTP Error: /bls1_qGapgwFwFkfsDJtPDdVLFol72O9qJpVn?token1=qGapgwFwFkfsDJtPDdVLFol72O9qJpVn - /bls1_qGapgwFwFkfsDJtPDdVLFol72O9qJpVn?token1=qGapgwFwFkfsDJtPDdVLFol72O9qJpVn
+ERROR:root:2024-05-19T14:52:11.724951 - HTTP Error: /_forms/default.aspx?ReturnUrl=/personal/hannah-daly_live_nmit_ac_nz/_layouts/15/Authenticate.aspx?Source%3D/personal/hannah-daly_live_nmit_ac_nz/_layouts/15/WopiFrame2.aspx?guestaccesstoken%253DIA5UzzOn3iViKU4F3pXemYHHABfWkPDjiRPFTFEaR/k%253D%2526amp%253Bdocid%253D1_169208e425ed84fea9fd294a6886d67e9%2526amp%253BwdFormId%253D%25257B06255F86-4BF9-4EE8-BD7E-FEF81913A79B%25257D%2526amp%253Baction%253Dformsubmit&Source=cookie - /_forms/default.aspx?ReturnUrl=%2fpersonal%2fhannah-daly_live_nmit_ac_nz%2f_layouts%2f15%2fAuthenticate.aspx%3fSource%3d%2fpersonal%2fhannah-daly_live_nmit_ac_nz%2f_layouts%2f15%2fWopiFrame2.aspx%3fguestaccesstoken%253DIA5UzzOn3iViKU4F3pXemYHHABfWkPDjiRPFTFEaR%2fk%253D%2526amp%253Bdocid%253D1_169208e425ed84fea9fd294a6886d67e9%2526amp%253BwdFormId%253D%25257B06255F86-4BF9-4EE8-BD7E-FEF81913A79B%25257D%2526amp%253Baction%253Dformsubmit&Source=cookie
+ERROR:root:2024-05-19T14:52:12.327263 - HTTP Error: index.php - index.php
+ERROR:root:2024-05-19T14:52:13.353666 - HTTP Error: Cannot connect to host chujiejy.com:443 ssl:default [Name or service not known] - https://chujiejy.com/info_cente=confirmation?coyidnsation_token=ejrc1cr3BQY8qP9oyyVQ
+ERROR:root:2024-05-19T14:52:18.162501 - HTTP Error: Cannot connect to host arkom-tula.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'arkom-tula.ru'. (_ssl.c:1129)")] - https://arkom-tula.ru/redirect.php
+ERROR:root:2024-05-19T14:52:20.748021 - HTTP Error: ./unsubscribe.php - ./unsubscribe.php
+ERROR:root:2024-05-19T14:52:21.466697 - HTTP Error: Cannot connect to host accedi.178-215-236-114.cprapid.com:443 ssl:default [Name or service not known] - https://accedi.178-215-236-114.cprapid.com/
+ERROR:root:2024-05-19T14:52:23.275543 - HTTP Error: Cannot connect to host njxjfbjgs.com:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'njxjfbjgs.com'. (_ssl.c:1129)")] - https://njxjfbjgs.com
+ERROR:root:2024-05-19T14:52:24.966916 - HTTP Error: Cannot connect to host portalsecurecgd.com:80 ssl:default [Name or service not known] - http://portalsecurecgd.com/CGD/login.php
+ERROR:root:2024-05-19T14:52:27.217133 - HTTP Error: Cannot connect to host cg51884.tw1.ru:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'cg51884.tw1.ru'. (_ssl.c:1129)")] - https://cg51884.tw1.ru/sofids/
+ERROR:root:2024-05-19T14:52:32.300704 - HTTP Error: /bls1_HB9IdhCOg4MD1TjItVUUsMNvVBd4KoLa?token1=HB9IdhCOg4MD1TjItVUUsMNvVBd4KoLa - /bls1_HB9IdhCOg4MD1TjItVUUsMNvVBd4KoLa?token1=HB9IdhCOg4MD1TjItVUUsMNvVBd4KoLa
+ERROR:root:2024-05-19T14:52:36.545802 - HTTP Error: Cannot connect to host myparcel-ukdepot-reschedule.com:80 ssl:default [Name or service not known] - http://myparcel-ukdepot-reschedule.com/
+ERROR:root:2024-05-19T14:52:36.977342 - HTTP Error: user.php - user.php
+ERROR:root:2024-05-19T14:52:36.984614 - HTTP Error: Cannot connect to host smbjxokw.com:443 ssl:True [SSLCertVerificationError: (1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'smbjxokw.com'. (_ssl.c:1129)")] - https://smbjxokw.com
+ERROR:root:2024-05-19T14:52:37.543039 - HTTP Error: Cannot connect to host late-faxach-ebc3.kifax98.workers.dev:443 ssl:default [Name or service not known] - https://late-faxach-ebc3.kifax98.workers.dev
+ERROR:root:2024-05-19T14:52:37.598776 - HTTP Error: Cannot connect to host pub-73f7c4b8548b4b85b24db2c1a65b8280.r2.dev:443 ssl:default [Name or service not known] - https://pub-73f7c4b8548b4b85b24db2c1a65b8280.r2.dev/amxress.html
+ERROR:root:2024-05-19T14:52:39.172992 - HTTP Error: /bls1_qcWCptywmiZy9o3R98Z1tnExXYoB7vJr?token1=qcWCptywmiZy9o3R98Z1tnExXYoB7vJr - /bls1_qcWCptywmiZy9o3R98Z1tnExXYoB7vJr?token1=qcWCptywmiZy9o3R98Z1tnExXYoB7vJr
+ERROR:root:2024-05-19T14:52:39.510600 - HTTP Error: /us - /us
+ERROR:root:2024-05-19T14:52:41.349939 - HTTP Error: Cannot connect to host meta-business.autosalesaccelerator.com:443 ssl:True [SSLCertVerificationError: (1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate (_ssl.c:1129)')] - https://meta-business.autosalesaccelerator.com/
+ERROR:root:2024-05-19T14:52:42.527846 - HTTP Error: /us - /us
+DEBUG:asyncio:Using selector: EpollSelector
+DEBUG:asyncio:Using selector: EpollSelector

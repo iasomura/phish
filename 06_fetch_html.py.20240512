@@ -1,0 +1,274 @@
+import os
+import psycopg2
+import requests
+from requests.exceptions import RequestException
+import json
+from datetime import datetime
+import time
+import logging
+import hashlib
+import asyncio
+from pyppeteer import launch
+#import datetime
+from datetime import datetime
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+# ログの設定
+log_file = os.path.join(os.path.dirname(__file__), 'error.log')
+logging.basicConfig(filename=log_file, level=logging.ERROR)
+
+# 設定ファイルの読み込み
+config_file = os.path.join(os.path.dirname(__file__), 'config.json')
+with open(config_file, 'r') as f:
+    config = json.load(f)
+
+db_host = config['database']['host']
+db_name = config['database']['name']
+db_user = config['database']['user']
+db_password = config['database']['password']
+
+# ユーザーエージェントの設定
+user_agents = {
+    'Chrome': config['Chrome'],
+    'Android': config['Android'],
+    'iPhone': config['iPhone']
+}
+
+basefolder = config['basefolder']
+
+# リダイレクトの最大追跡回数
+MAX_REDIRECTS = 10
+
+
+# データベースへのSQL実行関数
+def execute_sql(sql, *params):
+    try:
+        conn = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        conn.commit()
+        cur.close()
+        conn.close()
+        logging.info(f"Executed SQL: {cur.mogrify(sql, params)}")
+    except (Exception, psycopg2.DatabaseError) as error:
+        logging.error(f"{datetime.now().isoformat()} - Database Error: {str(error)}")
+
+# ウェブサイトデータの取得関数
+def get_website_data(user_agent):
+    try:
+        conn = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        cur = conn.cursor()
+        # 処理対象のウェブサイト数をカウント
+        cur.execute("SELECT COUNT(*) FROM website_data WHERE status = 5 AND (url IS NOT NULL OR url_pc_site IS NOT NULL OR (domain IS NOT NULL AND ip_address IS NOT NULL))")
+        total_websites = cur.fetchone()[0]
+        print(f"総ウェブサイト数: {total_websites}")
+        
+        
+        cur.execute("SELECT id, domain, url, url_pc_site, url_mobile_site FROM website_data WHERE status = 5 AND (url IS NOT NULL OR url_pc_site IS NOT NULL OR (domain IS NOT NULL AND ip_address IS NOT NULL))")
+        destinations = cur.fetchall()
+
+        website_count = 1        
+        for destination in destinations:
+            website_id, domain, url, url_pc_site, url_mobile_site = destination
+            print(f"処理中のウェブサイト: {website_count}/{total_websites} ({domain})")
+
+
+            if url is not None:
+                target_url = url
+            elif url_pc_site is not None:
+                target_url = url_pc_site
+            else:
+                target_url = f"https://{domain}"
+                
+            if url_mobile_site is not None:
+                mobile_target_url = url_mobile_site
+            elif url is not None:
+                mobile_target_url = url
+            else:
+                mobile_target_url = f"http://{domain}"
+
+            if url_mobile_site is None:
+                html_content, redirect_url = fetch_website(target_url, user_agent)
+                mobile_html_content = None
+                mobile_redirect_url = None
+            else:
+                mobile_html_content, mobile_redirect_url = fetch_website(mobile_target_url, user_agent)
+
+            print(html_content)
+            print(url)
+            if html_content is not None or redirect_url is not None or mobile_html_content is not None or mobile_redirect_url is not None:
+                sql = "UPDATE website_data SET html_pc_site = %s, url_pc_redirect = %s, html_mobile_site_iphone = %s, url_mobile_redirect_iphone = %s, html_mobile_site_android = %s, url_mobile_redirect_android = %s, status = 6, last_update = NOW() WHERE id = %s"
+                execute_sql(sql, html_content, redirect_url, mobile_html_content, mobile_redirect_url, mobile_html_content, mobile_redirect_url, website_id)
+
+                # スクリーンショットの取得
+                now = datetime.now()
+                filename_prefix = f"{now.year}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.minute:02d}{now.second:02d}_{domain}_{website_id}_{hashlib.md5(url.encode()).hexdigest()}"
+                screenshot_iphone = f"{filename_prefix}_iphone.png"
+                screenshot_android = f"{filename_prefix}_android.png"
+                screenshot_chrome = f"{filename_prefix}_chrome.png"
+
+                screenshot_iphone_success = capture_screenshot(url, user_agents['iPhone'], os.path.join(basefolder, screenshot_iphone))
+                screenshot_android_success = capture_screenshot(url, user_agents['Android'], os.path.join(basefolder, screenshot_android))
+                screenshot_chrome_success = capture_screenshot(url, user_agents['Chrome'], os.path.join(basefolder, screenshot_chrome))
+
+                # データベースの更新
+                if screenshot_iphone_success and screenshot_android_success and screenshot_chrome_success:
+                    screenshot_availability = True
+                else:
+                    screenshot_availability = False
+
+                    sql = "UPDATE website_data SET html_pc_site = %s, url_pc_redirect = %s, html_mobile_site_iphone = %s, url_mobile_redirect_iphone = %s, html_mobile_site_android = %s, url_mobile_redirect_android = %s, status = 6, last_update = NOW(), screenshot_availability = %s, screenshot_iphone = %s, screenshot_android = %s, screenshot_chrome = %s WHERE id = %s"
+                    execute_sql(sql, html_content, redirect_url, mobile_html_content, mobile_redirect_url, mobile_html_content, mobile_redirect_url, screenshot_availability, screenshot_iphone if screenshot_iphone_success else None, screenshot_android if screenshot_android_success else None, screenshot_chrome if screenshot_chrome_success else None, website_id)
+                    website_count += 1                
+
+            else:
+                sql = "UPDATE website_data SET status = 98 WHERE id = %s"
+                execute_sql(sql, website_id)
+                website_count += 1
+        cur.close()
+        conn.close()
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        logging.error(f"{datetime.now().isoformat()} - Error in get_website_data function: {str(error)}")
+
+
+
+# ウェブサイトにアクセスし、HTMLコンテンツを取得する関数（リダイレクトも処理する）
+def fetch_website(url, user_agent):
+    headers = {'User-Agent': user_agent}
+    redirect_url = None
+    html_content = None
+    redirects = 0
+    response = None
+
+    try:
+        while redirects <= MAX_REDIRECTS:
+            try:
+                response = requests.get(url, headers=headers, allow_redirects=False)
+            except RequestException as e:
+                logging.error(f"{datetime.now().isoformat()} - HTTP Error: {str(e)}")
+                #handle_http_error(e.response.status_code if e.response else None, url, user_agent)
+                handle_http_error(e.response.status_code if e.response else -1, url, user_agent)
+                return None, None
+            
+            if response is None:
+                logging.error(f"{datetime.now().isoformat()} - HTTP Error: No response received")
+                handle_http_error(None, url, user_agent)
+                return None, None
+
+            response.raise_for_status()
+
+            if response.status_code == 200:
+                html_content = response.text
+                break
+            elif response.status_code in (301, 302, 307, 308):
+                redirect_url = response.headers.get('Location')
+                url = redirect_url
+                redirects += 1
+            else:
+                break
+
+            if redirects > MAX_REDIRECTS:
+                logging.error(f"{datetime.now().isoformat()} - Max redirects exceeded for {url}")
+                break
+
+    except RequestException as e:
+        logging.error(f"{datetime.now().isoformat()} - HTTP Error: {str(e)}")
+        handle_http_error(response.status_code if response else None, url, user_agent)
+        return None, None
+
+    except Exception as e:
+        logging.error(f"{datetime.now().isoformat()} - System Error: {str(e)}")
+        return None, None
+
+    return html_content, redirect_url
+
+
+
+# HTTPエラーのハンドリングを行う関数
+def handle_http_error(status_code, url, user_agent):
+    if status_code is not None:
+        if status_code == 200:
+            logging.info(f"{datetime.now().isoformat()} - HTTP Status 200: {url}")
+        elif status_code == 104:
+            update_status_to_98(url)
+        elif status_code == 400 or (status_code >= 401 and status_code <= 499):
+            update_status_to_98(url)
+        elif status_code == 502:
+            update_status_to_98(url)
+        elif status_code == 500:
+            retries = 3
+            while retries > 0:
+                time.sleep(5)
+                html_content, redirect_url = fetch_website(url, user_agent)
+                if html_content is not None:
+                    break
+                retries -= 1
+        elif status_code == 503:
+            retries = 2
+            while retries > 0:
+                time.sleep(10)
+                html_content, redirect_url = fetch_website(url, user_agent)
+                if html_content is not None:
+                    break
+                retries -= 1
+
+
+# statusを98に変更する関数
+def update_status_to_98(url):
+    try:
+        conn = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        cur = conn.cursor()
+        cur.execute("UPDATE website_data SET status = 98 WHERE url = %s", (url,))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except (Exception, psycopg2.DatabaseError) as error:
+        logging.error(f"{datetime.now().isoformat()} - Error in update_status_to_98 function: {str(error)}")
+
+
+#def capture_screenshot(url, user_agent, filename):
+#    out_file = os.path.join(basefolder, filename)
+#    user_agent_header = f'--custom-header "User-Agent" "{user_agent}"'
+#    cmd = f'wkhtmltoimage {user_agent_header} --custom-header-propagation {url} {out_file}'
+#    os.system(cmd)
+
+"""
+async def capture_screenshot(url, user_agent, filename):
+    browser = await launch()
+    page = await browser.newPage()
+    await page.setUserAgent(user_agent)
+    await page.goto(url, {'waitUntil': 'networkidle0'})
+    await page.screenshot({'path': filename, 'fullPage': True})
+    await browser.close()
+"""
+
+
+def capture_screenshot(url, user_agent, filename):
+    browser = await launch()
+    page = await browser.newPage()
+    await page.setUserAgent(user_agent)
+    await page.goto(url, {'waitUntil': 'networkidle0'})
+    await page.screenshot({'path': filename, 'fullPage': True})
+    await browser.close()
+
+    
+def capture_screenshot_sync(url, user_agent, filename):
+    try:
+        # 最大スレッド数を5に設定
+        executor = ThreadPoolExecutor(max_workers=100)
+        
+        #asyncio.get_event_loop().run_until_complete(capture_screenshot(url, user_agent, filename))
+        # capture_screenshotを非同期で実行
+        loop = asyncio.get_event_loop()
+        future = loop.run_in_executor(executor, capture_screenshot, url, user_agent, filename)
+        
+        return True
+    except Exception as e:
+        logging.error(f"{datetime.now().isoformat()} - Error in capture_screenshot_sync function: {str(e)}")
+        return False
+    
+    # メイン処理
+for user_agent_name, user_agent_value in user_agents.items():
+    get_website_data(user_agent_value)

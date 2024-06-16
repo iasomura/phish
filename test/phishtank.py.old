@@ -1,0 +1,185 @@
+import requests
+import gzip
+import xml.etree.ElementTree as ET
+from urllib.parse import urlparse
+from datetime import datetime
+import psycopg2
+
+# データベース接続情報
+db_host = 'localhost'
+db_name = 'website_data'
+db_user = 'postgres'
+db_password = 'asomura'
+
+def connect_to_database():
+    try:
+        conn = psycopg2.connect(
+            host=db_host,
+            database=db_name,
+            user=db_user,
+            password=db_password
+        )
+        return conn
+    except psycopg2.Error as e:
+        print("Unable to connect to the database.")
+        print(e)
+        return None
+
+def get_existing_urls_from_database():
+    conn = connect_to_database()
+    if conn is not None:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT url FROM website_data")
+            existing_urls = [row[0] for row in cursor.fetchall()]
+            conn.close()
+            return existing_urls
+        except psycopg2.Error as e:
+            print("Error fetching existing URLs from database.")
+            print(e)
+            conn.close()
+            return None
+    else:
+        return None
+
+def update_database_with_new_entries(entries):
+    conn = connect_to_database()
+    if conn is not None:
+        try:
+            cursor = conn.cursor()
+            for entry in entries:
+                cursor.execute("""
+                    INSERT INTO website_data 
+                    (phish_from, status, url, phish_detail_url, cidr_block,  verified, domain_db_inserted_at, domain, domain_id, phish_tank_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s,%s)
+                    ON CONFLICT (url) DO NOTHING;
+                """, (entry['phish_from'], 0, entry['url'], entry['phish_detail_url'], entry['cidr_block'], entry['verified'], entry['domain_db_inserted_at'], entry['domain'], entry['domain_id'], entry['phish_tank_id']))
+            conn.commit()
+            print("Database updated successfully.")
+            conn.close()
+        except psycopg2.Error as e:
+            print("Error updating database.")
+            print(e)
+            conn.rollback()
+            conn.close()
+    else:
+        print("Database connection failed. Unable to update.")
+
+def filter_new_entries(existing_urls, entries):
+    new_entries = [entry for entry in entries if entry['url'] not in existing_urls]
+    return new_entries
+
+def update_database_with_xml_data(xml_data):
+    root = ET.fromstring(xml_data)
+    entries = []
+    for entry in root.findall('.//entry'):
+        url = entry.find('url').text
+        normalized_url = normalize_url(url)  # URLを正規化する
+        cidr_block_element = entry.find('cidr_block')
+        cidr_block = cidr_block_element.text if cidr_block_element is not None else None
+           entry_data = {
+            'phish_from': 'phishtank',
+            'url': normalized_url,
+            #'url': entry.find('url').text,
+            'phish_detail_url': entry.find('phish_detail_url').text,
+            'cidr_block': cidr_block,
+            'verified': entry.find('verified').text == 'true',
+            'domain_db_inserted_at': entry.find('domain_db_inserted_at').text,
+            'domain': entry.find('domain').text,
+            'domain_id': int(entry.find('domain_id').text),
+            'phish_tank_id': int(entry.find('phish_tank_id').text)
+        }
+        entries.append(entry_data)
+
+    existing_urls = get_existing_urls_from_database()
+    if existing_urls is not None:
+        new_entries = filter_new_entries(existing_urls, entries)
+        update_database_with_new_entries(new_entries)
+    else:
+        print("Unable to update database. Exiting...")
+
+def download_data(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.content
+    elif response.status_code == 429:
+        raise Exception("Too Many Requests: The server is limiting requests.")
+    else:
+        raise Exception(f"Failed to download data. HTTP status code: {response.status_code}")
+
+
+
+#def extract_xml_from_gzip(gzip_data):
+#with gzip.open(gzip_data, 'rb') as f:
+#        xml_data = f.read()
+#    return xml_data
+
+
+def read_xml_from_gzip(gzip_file):
+    try:
+        with gzip.open(gzip_file, 'rb') as f:
+            # gzipファイルからXMLデータを直接読み込む
+            #tree = ET.parse(f)
+            #root = tree.getroot()
+            #return root
+            xml_data = f.read()
+            return xml_data
+
+    except IOError as e:
+        print(f"Error reading gzip file: {e}")
+        return None
+    
+
+def normalize_url(url):
+    parsed_url = urlparse(url)
+    normalized_url = parsed_url.geturl()
+    return normalized_url
+
+def log_phish(url, status):
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open("phish_log.txt", "a") as f:
+        f.write(f"{current_time} - URL: {url}, Status: {status}\n")
+
+def main():
+    #download_url = "http://data.phishtank.com/data/online-valid.xml.gz"
+
+    # データのダウンロード
+#    print("Downloading data...")
+#    try:
+#        data = download_data(download_url)
+#    except Exception as e:
+#        print(f"Error: {e}")
+#        normalized_url = ""
+#        status = (f"Error: {e}")
+#        log_phish(normalized_url, status)
+#        return
+
+    # XMLの解凍
+    print("Extracting XML...")
+    #xml_data = extract_xml_from_gzip(data)
+
+    gzip_file = "online-valid.xml.gz"    
+    xml_data = read_xml_from_gzip(gzip_file)
+    #print (xml_data)
+    #if xml_data is not None:
+    #    print("Root element tag:", xml_data)
+    #else:
+    #    print("XML data could not be loaded.")
+
+    
+    # XMLの解析とURLの正規化
+    #print("Parsing XML and normalizing URLs...")
+    ##root = ET.fromstring(xml_data)
+    #root = read_xml_from_gzip(gzip_file)
+    #for entry in root.findall('.//entry'):
+    #    url = entry.find('url').text
+    #    normalized_url = normalize_url(url)
+        #status = entry.find('verified').text
+        #log_phish(normalized_url, status)
+
+    #print("Processing completed. Phishing log saved in phish_log.txt")
+    print("Updating database with XML data...")
+    update_database_with_xml_data(xml_data)
+
+if __name__ == "__main__":
+    main()

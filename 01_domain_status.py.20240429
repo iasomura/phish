@@ -1,0 +1,53 @@
+import psycopg2
+import subprocess
+
+# データベース接続情報
+db_host = 'localhost'
+db_name = 'website_data'
+db_user = 'postgres'
+db_password = 'asomura'
+
+try:
+    # データベースへの接続
+    conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
+    cur = conn.cursor()
+
+    # ドメイン情報を取得
+    cur.execute("SELECT id, domain FROM website_data where domain_status IS NULL AND status = 0")
+    domains = cur.fetchall()
+
+    for domain_data in domains:
+        domain_id, domain = domain_data
+        try:
+            # digコマンドの実行
+            #result = subprocess.run(['dig', 'HEADER', '+short', domain], capture_output=True, text=True)
+            result = subprocess.run(['dig', domain, ' AAA'], capture_output=True, text=True)
+            dig_output = result.stdout.strip()
+            #print(dig_output)
+            
+            # NXDOMAINまたはNOERRORのみの場合のみ記録
+            if 'NXDOMAIN' in dig_output:
+                domain_status = 'NXDOMAIN'
+            elif 'NOERROR' in dig_output:
+                domain_status = 'NOERROR'
+            else:
+                domain_status = None  # NXDOMAINまたはNOERROR以外の場合はNoneとする
+
+            # データベースの更新
+            if domain_status:
+                cur.execute("UPDATE website_data SET domain_status = %s, status = 1  WHERE id = %s", (domain_status, domain_id))
+                conn.commit()
+                print(f"Updated domain {domain} with status {domain_status}")
+            else:
+                print(f"No valid status found for domain {domain}")
+        except Exception as e:
+            print(f"Error processing domain {domain}: {e}")
+
+except Exception as e:
+    print(f"Database connection error: {e}")
+
+finally:
+    # データベース接続を閉じる
+    if conn:
+        cur.close()
+        conn.close()

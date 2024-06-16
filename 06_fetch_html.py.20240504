@@ -1,0 +1,203 @@
+import os
+import psycopg2
+import requests
+from requests.exceptions import RequestException
+import json
+from datetime import datetime
+import time
+import logging
+#import pdb; pdb.set_trace()
+
+# ログの設定
+log_file = os.path.join(os.path.dirname(__file__), 'error.log')
+logging.basicConfig(filename=log_file, level=logging.ERROR)
+
+# 設定ファイルの読み込み
+config_file = os.path.join(os.path.dirname(__file__), 'config.json')
+with open(config_file, 'r') as f:
+    config = json.load(f)
+
+db_host = config['database']['host']
+db_name = config['database']['name']
+db_user = config['database']['user']
+db_password = config['database']['password']
+
+# ユーザーエージェントの設定
+user_agents = {
+    'Chrome': config['Chrome'],
+    'Android': config['Android'],
+    'iPhone': config['iPhone']
+}
+
+# リダイレクトの最大追跡回数
+MAX_REDIRECTS = 10
+
+def get_website_data_(user_agent):
+    try:
+        conn = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        cur = conn.cursor()
+
+        cur.execute("SELECT id, url, url_pc_site, url_mobile_site FROM website_data")
+        destinations = cur.fetchall()
+
+        for destination in destinations:
+            website_id, url, url_pc_site, url_mobile_site = destination
+            print(url)
+            
+            # URLの選定ロジック
+            target_url = url if url else (url_pc_site if url_pc_site else f"http://{domain}")
+            mobile_target_url = url_mobile_site if url_mobile_site else (url if url else f"http://{domain}")
+
+            # ウェブサイトにアクセス
+            html_content, redirect_url = fetch_website(target_url, user_agent)
+            mobile_html_content, mobile_redirect_url = fetch_website(mobile_target_url, user_agent)
+
+            # データベースの更新
+            cur.execute("UPDATE website_data SET html_pc_site = %s, url_pc_redirect = %s, html_mobile_site_iphone = %s, url_mobile_redirect_iphone = %s, html_mobile_site_android = %s, url_mobile_redirect_android = %s, status = 6, last_update = NOW() WHERE id = %s", (html_content, redirect_url, mobile_html_content, mobile_redirect_url, mobile_html_content, mobile_redirect_url, website_id))
+            conn.commit()
+
+        cur.close()
+        conn.close()
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        # エラーを表示
+        print(f"Error occurred: {error}")
+        
+        # ログにエラーを記録
+        logging.error(f"{datetime.now().isoformat()} - System Error: {str(error)}")
+
+        
+
+def get_website_data(user_agent):
+    #print(user_agent)
+    try:
+        conn = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        cur = conn.cursor()
+
+        # status が 5 のレコードを取得
+        cur.execute("SELECT domain,url, url_pc_site, url_mobile_site FROM website_data WHERE status = 5 AND (url IS NOT NULL OR url_pc_site IS NOT NULL OR (domain IS NOT NULL AND ip_address IS NOT NULL))")
+        #cur.execute("SELECT domain,url, url_pc_site, url_mobile_site from website_data")
+        destinations= cur.fetchall()
+        #print(records)
+
+        for destination in destinations:
+            domain, url, url_pc_site, url_mobile_site = destination
+
+
+            # URLの選定ロジック
+            # URL の選定ロジック (Chrome)
+            if url is not None:
+                target_url = url
+            elif url_pc_site is not None:
+                target_url = url_pc_site
+            else:
+                target_url = f"https://{domain}"
+
+            print(target_url)
+                
+            # URL の選定ロジック (Android または iPhone)
+            if url_mobile_site is not None:
+                mobile_target_url = url_mobile_site
+            elif url is not None:
+                mobile_target_url = url
+            else:
+                mobile_target_url = f"http://{domain}"
+
+            # ウェブサイトにアクセス
+            html_content, redirect_url = fetch_website(target_url, user_agent)
+            print(html_content)
+            mobile_html_content, mobile_redirect_url = fetch_website(mobile_target_url, user_agent)
+            #print(html_content)
+
+            
+            # データベースの更新
+
+            # html_contentとredirect_urlがNoneでない場合のみ、データベースを更新する
+            if html_content is not None and redirect_url is not None and mobile_html_content is not None and mobile_redirect_url is not None:
+                cur.execute("UPDATE website_data SET html_pc_site = %s, url_pc_redirect = %s, html_mobile_site_iphone = %s, url_mobile_redirect_iphone = %s, html_mobile_site_android = %s, url_mobile_redirect_android = %s, status = 6, last_update = NOW() WHERE id = %s", (html_content, redirect_url, mobile_html_content, mobile_redirect_url, mobile_html_content, mobile_redirect_url, id))
+                conn.commit()
+                
+        cur.close()
+        conn.close()
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        logging.error(f"{datetime.now().isoformat()} - System Error: {str(error)}")
+
+def fetch_website(url, user_agent):
+    headers = {'User-Agent': user_agent}
+    redirect_url = None
+    html_content = None
+    redirects = 0
+    response = None  # responseを初期化
+
+    try:
+        while redirects <= MAX_REDIRECTS:
+            try:
+                response = requests.get(url, headers=headers, allow_redirects=False)
+            except RequestException as e:
+                logging.error(f"{datetime.now().isoformat()} - HTTP Error: {str(e)}")
+                handle_http_error(e.response.status_code, url, user_agent)
+                return None, None  # requests.get()が失敗した場合は終了
+            
+            response.raise_for_status() # HTTPエラーを発生させる
+
+            if response.status_code == 200:
+                html_content = response.text
+                break
+            elif response.status_code in (301, 302, 307, 308):
+                redirect_url = response.headers.get('Location')
+                url = redirect_url
+                redirects += 1
+            else:
+                break
+
+            if redirects > MAX_REDIRECTS:
+                logging.error(f"{datetime.now().isoformat()} - Max redirects exceeded for {url}")
+                break
+
+    except RequestException as e:
+        logging.error(f"{datetime.now().isoformat()} - HTTP Error: {str(e)}")
+        handle_http_error(response.status_code, url, user_agent)
+        # fetch_website関数でエラーが発生してもget_website_data関数のループは継続する
+        return None, None
+
+    except Exception as e:
+        logging.error(f"{datetime.now().isoformat()} - System Error: {str(e)}")
+        # fetch_website関数でエラーが発生してもget_website_data関数のループは継続する
+        return None, None
+
+    return html_content, redirect_url
+
+def handle_http_error(status_code, url, user_agent):
+    """
+    HTTPエラーが発生した場合の処理を行う関数
+    """
+    if status_code == 404:
+        # 404エラーの場合はリトライしない
+        pass
+    elif status_code == 500:
+        # 500エラーの場合は5秒後にリトライ、最大3回まで
+        retries = 3
+        while retries > 0:
+            time.sleep(5)
+            html_content, redirect_url = fetch_website(url, user_agent)
+            if html_content is not None:
+                break
+            retries -= 1
+    elif status_code == 503:
+        # 503エラーの場合は10秒後にリトライ、最大2回まで
+        retries = 2
+        while retries > 0:
+            time.sleep(10)
+            html_content, redirect_url = fetch_website(url, user_agent)
+            if html_content is not None:
+                break
+            retries -= 1
+
+# メイン処理
+
+
+for user_agent_name, user_agent_value in user_agents.items():
+    get_website_data(user_agent_value)
+
+    

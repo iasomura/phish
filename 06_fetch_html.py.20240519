@@ -1,0 +1,202 @@
+import asyncio
+import asyncpg
+import psycopg2
+import json
+import os
+import logging
+import aiohttp
+from pyppeteer import launch
+from datetime import datetime
+import hashlib
+
+# 設定ファイルの読み込み
+config_file = os.path.join(os.path.dirname(__file__), 'config.json')
+with open(config_file, 'r') as f:
+    config = json.load(f)
+
+# データベース接続情報の設定
+db_host = config['database']['host']
+db_name = config['database']['name']
+db_user = config['database']['user']
+db_password = config['database']['password']
+
+# ユーザーエージェントの設定
+user_agents = {
+    'Chrome': config['Chrome'],
+    'Android': config['Android'],
+    'iPhone': config['iPhone']
+}
+
+# スクリーンショットの保存先フォルダ
+basefolder = config['basefolder']
+if not os.path.exists(basefolder):
+    os.makedirs(basefolder)
+
+# リダイレクトの最大回数
+MAX_REDIRECTS = 10
+
+# ログ設定
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# 非同期でSQLを実行する関数
+async def execute_sql(sql, *params):
+    conn = None
+    try:
+        # データベースに接続
+        logging.debug("Connecting to database...")
+        conn = await asyncpg.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        logging.debug("Connected to database. Executing SQL...")
+        # SQLクエリを実行
+        await conn.execute(sql, *params)
+        logging.debug("SQL executed.")
+        logging.info(f"{datetime.now().isoformat()} - Executed SQL: {sql} with params: {params}")
+    except Exception as error:
+        # エラーログを記録
+        logging.error(f"{datetime.now().isoformat()} - Database Error: {str(error)}")
+    finally:
+        # データベース接続を閉じる
+        if conn:
+            await conn.close()
+            logging.debug("Connection closed.")
+        logging.debug("Exiting execute_sql")
+
+# ウェブサイトのHTMLコンテンツを取得する関数
+async def fetch_website(url, user_agent):
+    headers = {'User-Agent': user_agent}
+    redirect_url = None
+    html_content = None
+    redirects = 0
+
+    try:
+        # HTTPセッションを作成
+        async with aiohttp.ClientSession() as session:
+            while redirects <= MAX_REDIRECTS:
+                # リクエストを送信
+                async with session.get(url, headers=headers, allow_redirects=False) as response:
+                    if response.status == 200:
+                        # ステータスコード200の場合、HTMLコンテンツを取得
+                        html_content = await response.text()
+                        break
+                    elif response.status in (301, 302, 307, 308):
+                        # リダイレクト対応
+                        redirect_url = response.headers.get('Location')
+                        url = redirect_url
+                        redirects += 1
+                    else:
+                        # その他のステータスコードの場合はループを抜ける
+                        break
+
+                    if redirects > MAX_REDIRECTS:
+                        logging.error(f"{datetime.now().isoformat()} - Max redirects exceeded for {url}")
+                        break
+    except aiohttp.ClientError as e:
+        logging.error(f"{datetime.now().isoformat()} - HTTP Error: {str(e)}")
+    except Exception as e:
+        logging.error(f"{datetime.now().isoformat()} - System Error: {str(e)}")
+
+    return html_content, redirect_url
+
+# ウェブサイトのスクリーンショットを取得する関数
+async def capture_screenshot(url, user_agent, filename):
+    try:
+        # Pyppeteerでブラウザを起動
+        browser = await launch(headless=True)
+        page = await browser.newPage()
+        # ユーザーエージェントを設定
+        await page.setUserAgent(user_agent)
+        # 指定されたURLに移動
+        await page.goto(url)
+        # ページ全体のスクリーンショットを取得
+        await page.screenshot({'path': filename, 'fullPage': True})
+        logging.info(f"Full page screenshot saved to {filename}")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to capture full page screenshot: {e}")
+        return False
+    finally:
+        # ブラウザを閉じる
+        if browser:
+            await browser.close()
+
+# ウェブサイトを処理するメインの関数
+async def process_website(destination, semaphore, progress_tracker):
+    website_id, domain, url, url_pc_site, url_mobile_site = destination
+    logging.info(f"Processing website: {domain}")
+
+    # 取得するURLを決定
+    target_url = url or url_pc_site or f"https://{domain}"
+    mobile_target_url = url_mobile_site or url or f"http://{domain}"
+
+    async with semaphore:
+        # 各ユーザーエージェントごとにHTMLコンテンツを取得
+        html_content_pc, redirect_url_pc = await fetch_website(target_url, user_agents['Chrome'])
+        html_content_iphone, redirect_url_iphone = await fetch_website(target_url, user_agents['iPhone'])
+        html_content_android, redirect_url_android = await fetch_website(target_url, user_agents['Android'])
+
+    # HTMLコンテンツが取得できた場合
+    if html_content_pc or redirect_url_pc or html_content_iphone or redirect_url_iphone:
+        sql = """
+        UPDATE website_data SET 
+            html_pc_site = $1, url_pc_redirect = $2, 
+            html_mobile_site_iphone = $3, url_mobile_redirect_iphone = $4, 
+            html_mobile_site_android = $5, url_mobile_redirect_android = $6, 
+            status = 6, last_update = NOW() 
+        WHERE id = $7
+        """
+        await execute_sql(sql, html_content_pc, redirect_url_pc, html_content_iphone, redirect_url_iphone, html_content_android, redirect_url_android, website_id)
+
+        # 現在の日時とハッシュ値を使ってファイル名を生成
+        now = datetime.now()
+        filename_prefix = f"{now.year}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.minute:02d}{now.second:02d}_{domain}_{website_id}_{hashlib.md5(url.encode()).hexdigest()}"
+        screenshot_iphone = f"{filename_prefix}_iphone.png"
+        screenshot_android = f"{filename_prefix}_android.png"
+        screenshot_chrome = f"{filename_prefix}_chrome.png"
+
+        # 各デバイスごとにスクリーンショットを取得
+        screenshot_iphone_success = await capture_screenshot(target_url, user_agents['iPhone'], os.path.join(basefolder, screenshot_iphone))
+        screenshot_android_success = await capture_screenshot(target_url, user_agents['Android'], os.path.join(basefolder, screenshot_android))
+        screenshot_chrome_success = await capture_screenshot(target_url, user_agents['Chrome'], os.path.join(basefolder, screenshot_chrome))
+
+        # スクリーンショットが全て成功したかどうかを確認
+        screenshot_availability = screenshot_iphone_success and screenshot_android_success and screenshot_chrome_success
+        sql = """
+        UPDATE website_data SET 
+            screenshot_availability = $1, 
+            screenshot_iphone = $2, 
+            screenshot_android = $3, 
+            screenshot_chrome = $4 
+        WHERE id = $5
+        """
+        await execute_sql(sql, screenshot_availability, screenshot_iphone if screenshot_iphone_success else None, screenshot_android if screenshot_android_success else None, screenshot_chrome if screenshot_chrome_success else None, website_id)
+    else:
+        # HTMLコンテンツが取得できなかった場合、ステータスを98に更新
+        await execute_sql("UPDATE website_data SET status = 98 WHERE id = $1", website_id)
+    
+    # 進捗を更新
+    progress_tracker['completed'] += 1
+    print(f"Progress: {progress_tracker['completed']}/{progress_tracker['total']} websites processed.")
+
+# メイン関数
+async def main():
+    # セマフォを設定して同時実行数を制限
+    semaphore = asyncio.Semaphore(5)
+
+    # データベースに接続して処理対象のウェブサイト情報を取得
+    conn = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+    cur = conn.cursor()
+    cur.execute("SELECT id, domain, url, url_pc_site, url_mobile_site FROM website_data WHERE status = 5 AND (url IS NOT NULL OR url_pc_site IS NOT NULL OR (domain IS NOT NULL AND ip_address IS NOT NULL))")
+    destinations = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    # 進捗管理用の変数を初期化
+    progress_tracker = {'total': len(destinations), 'completed': 0}
+
+    # 各ウェブサイトの処理タスクを作成
+    tasks = [process_website(destination, semaphore, progress_tracker) for destination in destinations]
+
+    # タスクを実行
+    await asyncio.gather(*tasks)
+
+if __name__ == '__main__':
+    asyncio.run(main())

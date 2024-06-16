@@ -1,0 +1,9 @@
+2024-04-28 18:27:16 - URL: , Status: Error: {e}
+2024-04-28 18:28:09 - URL: , Status: Error: Too Many Requests: The server is limiting requests.
+2024-04-28 18:44:38 - URL: , Status: Error: Too Many Requests: The server is limiting requests.
+2024-04-28 18:48:11 - URL: , Status: Error: Too Many Requests: The server is limiting requests.
+2024-04-28 18:48:23 - URL: , Status: Error: Too Many Requests: The server is limiting requests.
+2024-04-28 18:56:52 - URL: , Status: Error: Too Many Requests: The server is limiting requests.
+2024-04-28 19:07:32 - URL: , Status: Error: Too Many Requests: The server is limiting requests.
+2024-04-29 00:15:31 - URL: , Status: Error: Too Many Requests: The server is limiting requests.
+2024-04-29 06:09:12 - URL: , Status: Error: Too Many Requests: The server is limiting requests.

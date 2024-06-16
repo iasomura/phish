@@ -1,0 +1,63 @@
+import psycopg2
+import subprocess
+import shlex
+
+# データベース接続情報
+db_host = 'localhost'
+db_name = 'website_data'
+db_user = 'postgres'
+db_password = 'asomura'
+
+# PostgreSQLへの接続を確立
+conn_params = {
+    "host": db_host,
+    "database": db_name,
+    "user": db_user,
+    "password": db_password
+}
+conn = psycopg2.connect(**conn_params)
+
+# カーソルを作成
+cur = conn.cursor()
+
+# SQLクエリを定義
+sql_query = """
+    SELECT id, ip_address
+    FROM website_data
+    WHERE status = 4
+"""
+
+# SQLクエリを実行
+cur.execute(sql_query)
+
+# 結果を取得
+results = cur.fetchall()
+
+# 各IPアドレスに対してWHOISを実行し、データベースに挿入
+for row in results:
+    record_id, ip_address = row
+    cmd = f"whois {ip_address}"
+    whois_result = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    #print(whois_result)
+    #exit
+    #whois_result = subprocess.run(["whois", ip_address], capture_output=True, text=True)
+    
+    # whois_result.stdoutがNoneでないことを確認し、WHOIS情報を挿入
+    if whois_result.stdout is not None:
+        whois_output = whois_result.stdout
+        # whois_ipカラムに挿入するためのSQLクエリを定義
+        update_query = """
+            UPDATE website_data
+            SET
+            last_update = now(),
+            status = 5,
+            whois_ip = %s
+            WHERE id = %s
+        """
+        # whois_ipカラムにWHOIS情報を挿入
+        cur.execute(update_query, (whois_output, record_id))
+        conn.commit()
+
+# カーソルと接続をクローズ
+cur.close()
+conn.close()
