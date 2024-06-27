@@ -6,7 +6,7 @@ import time
 from urllib.parse import urlparse
 
 # Torプロキシの設定
-use_tor_proxy = True  # Torプロキシを使用する場合はTrue、使用しない場合はFalseに設定
+use_tor_proxy = False  # Torプロキシを使用する場合はTrue、使用しない場合はFalseに設定
 proxies = {
     'http': 'socks5h://localhost:9050',
     'https': 'socks5h://localhost:9050'
@@ -42,10 +42,23 @@ def generate_random_values():
     val3_length = random.randint(8, 12)
     val3 = ''.join(random.choices(string.ascii_letters + string.digits, k=val3_length))
     
-    print(f"Random values generated - Val1: {val1}, Val2: {val2}, Val3: {val3}")
-    return val1, val2, val3
+    # val4: 6桁のランダムな数字
+    val4 = ''.join(random.choices(string.digits, k=6))
+    
+    # val5: 090で始まる8桁のランダムな携帯電話番号
+    val5 = '090' + ''.join(random.choices(string.digits, k=8))
+    
+    # val6: ランダムなメールアドレス
+    val6_username_length = random.randint(5, 10)
+    val6_domain_length = random.randint(3, 7)
+    val6_username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=val6_username_length))
+    val6_domain = ''.join(random.choices(string.ascii_lowercase, k=val6_domain_length))
+    val6 = f"{val6_username}@{val6_domain}.com"
+    
+    print(f"Random values generated - Val1: {val1}, Val2: {val2}, Val3: {val3}, Val4: {val4}, Val5: {val5}, Val6: {val6}")
+    return val1, val2, val3, val4, val5, val6
 
-def send_post_request(url, val1, val2, val3, proxies):
+def send_post_request(url, val1, val2, val3, val4, val5, val6, proxies):
     print(f"Sending POST request to {url} using proxies {proxies}...")
     session_id = generate_session_id()
     parsed_url = urlparse(url)
@@ -74,6 +87,9 @@ def send_post_request(url, val1, val2, val3, proxies):
         "Val1": val1,
         "Val2": val2,
         "Val3": val3,
+        "Val4": val4,
+        "Val5": val5,
+        "Val6": val6,
         "Page": "login"
     }
 
@@ -93,19 +109,23 @@ with open('url.txt', 'r') as file:
 
 urls = [url.strip() for url in urls if url.strip()]
 
+num_requests = int(input("Enter the number of POST requests to send for each URL: "))
+
 for url in urls:
     print(f"Processing URL: {url}")
     
-    # Torプロキシを再起動
-    restart_tor()
+    for _ in range(num_requests):
+        if use_tor_proxy:
+            # Torプロキシを再起動
+            restart_tor()
 
-    # ランダムな値を生成
-    val1, val2, val3 = generate_random_values()
+        # ランダムな値を生成
+        val1, val2, val3, val4, val5, val6 = generate_random_values()
 
-    # POSTリクエストを送信
-    response = send_post_request(url, val1, val2, val3, proxies)
-    if response:
-        print('Status Code:', response.status_code)
-        print('Response Text:', response.text)
-    else:
-        print(f"Failed to send POST request to {url}.")
+        # POSTリクエストを送信
+        response = send_post_request(url, val1, val2, val3, val4, val5, val6, proxies)
+        if response:
+            print('Status Code:', response.status_code)
+            print('Response Text:', response.text)
+        else:
+            print(f"Failed to send POST request to {url}.")
