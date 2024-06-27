@@ -179,3 +179,43 @@ ALTER TABLE website_data ADD COLUMN mhtml_content_pc BYTEA;
 ALTER TABLE website_data ADD COLUMN mhtml_mobile_site_iphone BYTEA;
 ALTER TABLE website_data ADD COLUMN mhtml_mobile_site_android BYTEA;
 
+
+
+
+CREATE TABLE certificate_data (
+    id BIGINT PRIMARY KEY,
+    issuer_ca_id INTEGER,
+    issuer_name TEXT,
+    common_name TEXT,
+    name_value TEXT,
+    entry_timestamp TIMESTAMP,
+    not_before TIMESTAMP,
+    not_after TIMESTAMP,
+    serial_number TEXT,
+    result_count INTEGER,
+    domain_name VARCHAR(1024),  -- website_dataテーブルとの関連付けのためのドメイン名
+    ip_address VARCHAR(50)      -- website_dataテーブルとの関連付けのためのIPアドレス
+);
+
+ALTER TABLE certificate_data
+ADD COLUMN country VARCHAR(2),
+ADD COLUMN organization TEXT,
+ADD COLUMN cn TEXT;
+
+CREATE INDEX idx_certificate_data_ip_address ON certificate_data(ip_address);
+
+--- ステップ 1: 一意制約の追加
+ALTER TABLE website_data
+ADD CONSTRAINT website_data_domain_unique UNIQUE (domain);
+
+-- ステップ 2: 外部キー制約の追加
+-- 外部キー制約を追加するための準備が整ったら、外部キー制約を追加します
+ALTER TABLE certificate_data
+ADD CONSTRAINT fk_certificate_data_domain
+FOREIGN KEY (domain_name) REFERENCES website_data(domain);
+
+
+-- ステップ 3: インデックスの作成
+-- 最後に、ip_address列にインデックスを作成します
+CREATE INDEX idx_certificate_data_ip_address ON certificate_data(ip_address);
+

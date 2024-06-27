@@ -2,11 +2,10 @@ import re
 import subprocess
 import psycopg2
 import logging
+from urllib.parse import urlparse
 
 # ログの設定
 logging.basicConfig(filename='03_error.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
-
-
 
 # データベース接続情報
 db_host = 'localhost'
@@ -29,6 +28,30 @@ def is_valid_ip(ip):
     pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
     return re.match(pattern, ip)
 
+def get_ip_from_nslookup(output):
+    """
+    nslookupの出力からIPアドレスを抽出する関数
+    """
+    non_auth_ip = None
+    auth_ip = None
+    for line in output.splitlines():
+        if "Non-authoritative answer" in line:
+            non_auth_ip = True
+        if "Address:" in line:
+            ip = line.split("Address:")[1].strip()
+            if is_valid_ip(ip):
+                if non_auth_ip:
+                    return ip  # Non-authoritative answerのIPを優先して返す
+                auth_ip = ip  # Non-authoritative answerがない場合のIPを保存
+    return auth_ip
+
+def extract_domain_from_url(url):
+    """
+    URLからドメインを抽出する関数
+    """
+    parsed_url = urlparse(url)
+    return parsed_url.hostname
+
 def update_website_data(connection):
     """
     ウェブサイトデータを更新する関数
@@ -36,31 +59,31 @@ def update_website_data(connection):
     cursor = connection.cursor()
     try:
         # 条件に基づいてウェブサイトデータを取得
-        cursor.execute("SELECT id, domain FROM website_data WHERE domain_status = 'NOERROR' AND dig_info_A IS NULL AND status = 2")
+        cursor.execute("SELECT id, url FROM website_data WHERE domain_status = 'NOERROR' AND dig_info_A IS NULL AND status = 2")
         websites = cursor.fetchall()
         total_websites = len(websites)
         processed_websites = 0
 
         for website in websites:
-            website_id, domain = website
+            website_id, url = website
+            domain = extract_domain_from_url(url)
             try:
-                # Aレコードを調べ、結果をdig_info_A TEXTに格納する
-                dig_info_A = execute_command(f"dig +noall +answer {domain} A")
+                # nslookupを使用してAレコードを調べ、結果をdig_info_A TEXTに格納する
+                nslookup_output = execute_command(f"nslookup {domain}")
+                dig_info_A = nslookup_output
+                ip_address = get_ip_from_nslookup(nslookup_output)
+
+                # IPアドレスが取得できない場合は例外を発生させる
+                if not ip_address:
+                    raise ValueError(f"IPアドレスが取得できませんでした: {domain}")
+
                 # TTLの値を取得してdig_info_TTL_Aに格納する
                 dig_info_TTL_A = None
-                if dig_info_A.strip():
-                    ttl_values = [int(line.split()[1]) for line in dig_info_A.split('\n') if line.strip()]
+                if ip_address:
+                    dig_output = execute_command(f"dig +noall +answer {domain} A")
+                    ttl_values = [int(line.split()[1]) for line in dig_output.split('\n') if line.strip()]
                     if ttl_values:
                         dig_info_TTL_A = min(ttl_values)
-
-                # IPアドレスを取り出して形式をチェックし、ip_addressカラムに挿入する
-                ip_address = None
-                if dig_info_A.strip():
-                    ip_addresses = [line.split()[4] for line in dig_info_A.split('\n') if line.strip()]
-                    for ip in ip_addresses:
-                        if is_valid_ip(ip):
-                            ip_address = ip
-                            break
 
                 # MXレコードを調べ、結果をdig_info_MX TEXTに格納する
                 dig_info_MX = execute_command(f"dig +noall +answer {domain} MX")
@@ -84,17 +107,11 @@ def update_website_data(connection):
                 connection.commit()
                 # エラーログを記録
                 logging.error("エラーが発生しました: %s", e)
-                #connection.rollback()
                 print("エラーが発生しました:", e)
-                #break
 
-        # トランザクションをコミット
-        #connection.commit()
         print("\nウェブサイトデータが正常に更新されました。")
 
     except Exception as e:
-        # エラーが発生した場合はロールバック
-        #connection.rollback()
         print("エラーが発生しました:", e)
 
     finally:

@@ -4,24 +4,36 @@ import subprocess
 import shlex
 import datetime
 import ipaddress
+import signal
 
-# 環境変数からデータベース接続情報を取得
-#db_host = os.getenv('DB_HOST', 'localhost')
-#db_name = os.getenv('DB_NAME', 'website_data')
-#db_user = os.getenv('DB_USER', 'postgres')
-#db_password = os.getenv('DB_PASSWORD', '')
+# タイムアウト例外
+class CommandTimeout(Exception):
+    pass
 
-conn = psycopg2.connect("host=localhost dbname=website_data user=postgres password=asomura")
+# タイムアウトハンドラ
+def timeout_handler(signum, frame):
+    raise CommandTimeout("Command timed out")
+
+# タイムアウト付きでコマンドを実行する関数
+def run_command_with_timeout(cmd, timeout=30):
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(timeout)
+    try:
+        result = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        signal.alarm(0)  # タイムアウトをリセット
+        return result.stdout
+    except CommandTimeout:
+        return b'TIMEOUT'
+    except subprocess.CalledProcessError as e:
+        return b'ERROR'
+    finally:
+        signal.alarm(0)  # タイムアウトをリセット
+
 # データベース接続情報
 db_host = 'localhost'
 db_name = 'website_data'
 db_user = 'postgres'
 db_password = 'asomura'
-#conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
-cur = conn.cursor()
-
-conn = None
-cur = None
 
 try:
     # PostgreSQLへの接続を確立
@@ -44,7 +56,6 @@ try:
     # SQLクエリを実行
     cur.execute(sql_query)
     results = cur.fetchall()
-
     total_records = len(results)
     processed_records = 0
 
@@ -60,12 +71,7 @@ try:
             continue
 
         cmd = f"whois {ip}"
-        try:
-            whois_result = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-            whois_output = whois_result.stdout
-        except subprocess.CalledProcessError as e:
-            print(f"レコード {record_id} のWHOIS情報の取得中にエラーが発生しました:", e)
-            whois_output = b'ERROR'
+        whois_output = run_command_with_timeout(cmd)
 
         # WHOISの出力をデコード
         whois_output_decoded = whois_output.decode('utf-8', errors='ignore')
@@ -79,10 +85,20 @@ try:
             whois_ip = %s
             WHERE id = %s
         """
+
         # 現在の日時を取得
         current_time = datetime.datetime.now()
+
+        # statusの設定
+        if whois_output_decoded == 'TIMEOUT':
+            status = 98  # タイムアウトの場合
+        elif whois_output_decoded == 'ERROR':
+            status = 99  # エラーの場合
+        else:
+            status = 5   # 正常な場合
+
         # whois_ipカラムにWHOIS情報を挿入
-        cur.execute(update_query, (current_time, 5 if whois_output_decoded != 'ERROR' else 99, whois_output_decoded, record_id))
+        cur.execute(update_query, (current_time, status, whois_output_decoded, record_id))
         conn.commit()
 
         processed_records += 1
@@ -90,6 +106,7 @@ try:
 
 except psycopg2.Error as e:
     print("データベースエラー:", e)
+
 finally:
     # カーソルと接続をクローズ
     if cur:

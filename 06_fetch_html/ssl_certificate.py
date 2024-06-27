@@ -3,10 +3,13 @@ import asyncpg
 import json
 import logging
 import ssl
+import socket
 import OpenSSL.crypto
-import subprocess
 import asyncio
 from datetime import datetime
+from database import execute_sql
+import base64
+
 
 # ログの設定
 log_file = os.path.join(os.path.dirname(__file__), '07_error.log')
@@ -22,13 +25,6 @@ db_name = config['database']['name']
 db_user = config['database']['user']
 db_password = config['database']['password']
 
-# ユーザーエージェントの設定
-user_agents = {
-    'Chrome': config['Chrome'],
-    'Android': config['Android'],
-    'iPhone': config['iPhone']
-}
-
 # タイムアウト付きで非同期にコマンドを実行する関数
 async def run_command_with_timeout(cmd, timeout=30):
     try:
@@ -43,20 +39,7 @@ async def run_command_with_timeout(cmd, timeout=30):
         logging.error(f"{datetime.now().isoformat()} - Command timed out: {cmd}")
         return None
 
-# 非同期でSQLを実行する関数
-async def execute_sql(sql, *params):
-    conn = None
-    result = None
-    try:
-        conn = await asyncpg.connect(host=db_host, database=db_name, user=db_user, password=db_password)
-        result = await conn.execute(sql, *params)
-        logging.info(f"{datetime.now().isoformat()} - Executed SQL: {sql} with params: {params}")
-    except Exception as error:
-        logging.error(f"{datetime.now().isoformat()} - Database Error: {str(error)}")
-    finally:
-        if conn:
-            await conn.close()
-    return result
+
 
 # 非同期でSSL証明書情報を取得する関数
 async def get_ssl_certificate_info(domain):
@@ -64,66 +47,62 @@ async def get_ssl_certificate_info(domain):
         target_url = f"{domain}:443"
         openssl_cmd = f"openssl s_client -connect {target_url} -showcerts"
         openssl_output = await run_command_with_timeout(openssl_cmd)
+        #logging.info(f"{openssl_output}")
         
         if openssl_output is None:
             return None
 
-        cert = await asyncio.to_thread(ssl.get_server_certificate, (domain, 443))
-        x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        # SSLコンテキストを作成してTLSバージョンを指定
+        context = ssl.create_default_context()
+        with socket.create_connection((domain, 443)) as sock:
+            with context.wrap_socket(sock, server_hostname=domain) as conn:
+                cert = conn.getpeercert(True)
 
-        domain = x509.get_subject().CN
-        issuer = x509.get_issuer().CN
-        expiry_date = x509.get_notAfter().decode('utf-8')
-        public_key = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, x509.get_pubkey()).decode('utf-8')
-        signature_algorithm = x509.get_signature_algorithm().decode('utf-8')
-        extensions = [x509.get_extension(i).get_short_name().decode('utf-8') for i in range(x509.get_extension_count())]
+                x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, cert)
 
-        return {
-            'https_certficate_all': openssl_output,
-            'cert': cert,
-            'domain': domain,
-            'issuer': issuer,
-            'expiry_date': expiry_date,
-            'public_key': public_key,
-            'signature_algorithm': signature_algorithm,
-            'extensions': extensions
-        }
+                domain = x509.get_subject().CN
+                issuer = x509.get_issuer().CN
+                expiry_date = x509.get_notAfter().decode('utf-8')
+                public_key = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, x509.get_pubkey()).decode('utf-8')
+                signature_algorithm = x509.get_signature_algorithm().decode('utf-8')
+                extensions = [x509.get_extension(i).get_short_name().decode('utf-8') for i in range(x509.get_extension_count())]
+                #extentions = "test"
+
+                return {
+                    'https_certificate_all': openssl_output,
+                    'cert': cert,
+                    'domain': domain,
+                    'issuer': issuer,
+                    'expiry_date': expiry_date,
+                    'public_key': public_key,
+                    'signature_algorithm': signature_algorithm,
+                    'extensions': extensions
+                }
     except Exception as e:
         logging.error(f"{datetime.now().isoformat()} - SSL Certificate Error: {str(e)} - {domain}")
         return None
 
+
+
 # 非同期で取得したSSL証明書情報をデータベースに保存する関数
 async def save_ssl_certificate_info(website_id, domain, certificate_info):
-    sql = """
-        UPDATE website_data SET 
-        https_certificate_date = NOW(), 
-        https_certificate_all = $1, 
-        https_certificate_body = $2, 
-        https_certificate_domain = $3, 
-        https_certificate_issuer = $4, 
-        https_certificate_expiry = $5, 
-        https_certificate_public_key = $6, 
-        https_certificate_signature_algorithm = $7, 
-        https_certificate_extensions = $8,
-        status = 7
-        WHERE id = $9
-    """
-    result = await execute_sql(sql, 
-                               certificate_info['https_certficate_all'],
-                               certificate_info['cert'],
-                               certificate_info['domain'],
-                               certificate_info['issuer'],
-                               certificate_info['expiry_date'],
-                               certificate_info['public_key'],
-                               certificate_info['signature_algorithm'],
-                               json.dumps(certificate_info['extensions']),
-                               website_id)
-    logging.info(f"{datetime.now().isoformat()} - SQL Execution Result: {result} for website_id: {website_id}, domain: {domain}")
+    #だっさいけど、とりあえず、動くものを。execute_sql()は見直しをしないと....
+    await execute_sql("UPDATE website_data SET https_certificate_date = now() WHERE id = %s",  website_id)
+    await execute_sql("UPDATE website_data SET https_certificate_all = %s WHERE id = %s", certificate_info['https_certificate_all'], website_id)
+    await execute_sql("UPDATE website_data SET https_certificate_body = %s WHERE id = %s", certificate_info['cert'], website_id)
+    await execute_sql("UPDATE website_data SET https_certificate_domain = %s WHERE id = %s", certificate_info['domain'], website_id)
+    await execute_sql("UPDATE website_data SET https_certificate_issuer = %s WHERE id = %s", certificate_info['issuer'], website_id)
+    await execute_sql("UPDATE website_data SET https_certificate_expiry = %s WHERE id = %s", certificate_info['expiry_date'], website_id)
+    await execute_sql("UPDATE website_data SET https_certificate_public_key = %s WHERE id = %s", certificate_info['public_key'], website_id)
+    await execute_sql("UPDATE website_data SET https_certificate_signature_algorithm = %s WHERE id = %s", certificate_info['signature_algorithm'], website_id)    
+    await execute_sql("UPDATE website_data SET https_certificate_extensions = %s WHERE id = %s", json.dumps(certificate_info['extensions']), website_id)
+    await execute_sql("UPDATE website_data SET status = %s WHERE id = %s", 7, website_id)
+    logging.info(f"Updated website_data for {website_id} with status 7")
+
 
 # SSL証明書の取得に失敗した場合にstatusを97に更新する関数
 async def update_status_to_97(website_id):
-    sql = "UPDATE website_data SET status = 97 WHERE id = $1"
-    result = await execute_sql(sql, website_id)
+    await execute_sql("UPDATE website_data SET status = 97 WHERE id = %s",  website_id)
     logging.info(f"{datetime.now().isoformat()} - Updated status to 97 for website_id: {website_id}")
 
 # 非同期で各ウェブサイトを処理する関数
@@ -148,7 +127,7 @@ async def process_website(website_id, domain, progress, semaphore):
 async def get_website_data(user_agent):
     try:
         conn = await asyncpg.connect(host=db_host, database=db_name, user=db_user, password=db_password)
-        records = await conn.fetch("SELECT id, domain FROM website_data WHERE (status = 98 OR status = 6) AND domain IS NOT NULL AND (mhtml_pc_site IS NOT NULL OR mhtml_mobile_site_iphone IS NOT NULL OR mhtml_mobile_site_android IS NOT NULL)")
+        records = await conn.fetch("SELECT id, domain FROM website_data WHERE (status = 97 OR status = 98 OR status = 6) AND domain IS NOT NULL AND (mhtml_pc_site IS NOT NULL OR mhtml_mobile_site_iphone IS NOT NULL OR mhtml_mobile_site_android IS NOT NULL)")
         await conn.close()
         
         total_destinations = len(records)
@@ -179,3 +158,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
