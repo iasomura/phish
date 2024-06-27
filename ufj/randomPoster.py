@@ -1,14 +1,28 @@
 import requests
 import random
 import string
+import subprocess
+import time
 from urllib.parse import urlparse
 
 # Torプロキシの設定
-use_tor_proxy = False  # Torプロキシを使用する場合はTrue、使用しない場合はFalseに設定
+use_tor_proxy = True  # Torプロキシを使用する場合はTrue、使用しない場合はFalseに設定
 proxies = {
     'http': 'socks5h://localhost:9050',
     'https': 'socks5h://localhost:9050'
 } if use_tor_proxy else None
+
+def restart_tor():
+    """Torプロキシを再起動する"""
+    print("Restarting Tor proxy...")
+    try:
+        # Torの再起動コマンド
+        subprocess.run(["sudo", "systemctl", "restart", "tor"], check=True)
+        # Torが再起動するのを待つ
+        time.sleep(5)
+        print("Tor proxy restarted successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error restarting Tor proxy: {e}")
 
 def generate_session_id():
     """32文字のランダムな文字列を生成する"""
@@ -16,7 +30,7 @@ def generate_session_id():
     return ''.join(random.choice(characters) for _ in range(32))
 
 def generate_random_values():
-    print("Step 2: Generating random values...")
+    print("Generating random values...")
     # val1: 3桁のランダムな数字
     val1 = str(random.randint(100, 999))
     
@@ -31,8 +45,8 @@ def generate_random_values():
     print(f"Random values generated - Val1: {val1}, Val2: {val2}, Val3: {val3}")
     return val1, val2, val3
 
-def send_post_request(url, val1, val2, val3):
-    print("Step 3: Sending POST request...")
+def send_post_request(url, val1, val2, val3, proxies):
+    print(f"Sending POST request to {url} using proxies {proxies}...")
     session_id = generate_session_id()
     parsed_url = urlparse(url)
     host = parsed_url.netloc
@@ -73,19 +87,25 @@ def send_post_request(url, val1, val2, val3):
         return None
 
 # URLをurl.txtから読み込む
-print("Step 0: Reading URL from url.txt...")
+print("Reading URLs from url.txt...")
 with open('url.txt', 'r') as file:
-    url = file.read().strip()
+    urls = file.readlines()
 
-print(f"URL read: {url}")
+urls = [url.strip() for url in urls if url.strip()]
 
-# ランダムな値を生成
-val1, val2, val3 = generate_random_values()
+for url in urls:
+    print(f"Processing URL: {url}")
+    
+    # Torプロキシを再起動
+    restart_tor()
 
-# POSTリクエストを送信
-response = send_post_request(url, val1, val2, val3)
-if response:
-    print('Status Code:', response.status_code)
-    print('Response Text:', response.text)
-else:
-    print("Failed to send POST request. Exiting...")
+    # ランダムな値を生成
+    val1, val2, val3 = generate_random_values()
+
+    # POSTリクエストを送信
+    response = send_post_request(url, val1, val2, val3, proxies)
+    if response:
+        print('Status Code:', response.status_code)
+        print('Response Text:', response.text)
+    else:
+        print(f"Failed to send POST request to {url}.")
