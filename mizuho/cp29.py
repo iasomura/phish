@@ -6,7 +6,7 @@ import time
 from requests.exceptions import RequestException, HTTPError, Timeout, TooManyRedirects
 
 # Torプロキシの設定
-use_tor_proxy = False  # Torプロキシを使用する場合はTrue、使用しない場合はFalseに設定
+use_tor_proxy = True  # Torプロキシを使用する場合はTrue、使用しない場合はFalseに設定
 tor_proxy_address = 'socks5h://localhost:9050'
 proxies = {
     'http': tor_proxy_address,
@@ -22,12 +22,13 @@ def restart_tor_proxy():
         except Exception as e:
             print(f"Error restarting Tor proxy: {e}")
 
-# サーバーホスト
-host = "mujerjffnr.click"
+# URLリストを読み込む関数
+def read_urls_from_file(filename='url.txt'):
+    with open(filename, 'r') as file:
+        return [line.strip() for line in file.readlines()]
 
 # GETリクエストでクッキーを取得する関数
-def get_initial_cookies():
-    url = f"https://{host}/"
+def get_initial_cookies(url):
     headers = {
         'Accept-Language': 'ja',
         'Upgrade-Insecure-Requests': '1',
@@ -50,8 +51,7 @@ def get_initial_cookies():
         return None, None
 
 # リダイレクトURLを取得する関数
-def get_redirect_location(cookies):
-    url = f"https://{host}/"
+def get_redirect_location(url, cookies):
     headers = {
         'Accept-Language': 'ja',
         'Upgrade-Insecure-Requests': '1',
@@ -74,19 +74,19 @@ def get_redirect_location(cookies):
         return None
 
 # POSTリクエストを送信する関数
-def send_post_request(redirect_location, cookies):
-    url = f"https://{host}{redirect_location}"
+def send_post_request(host, redirect_location, cookies):
+    url = f"{host}{redirect_location}"
     headers = {
         'Accept-Language': 'ja',
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Mobile/15E148 Snapchat/10.77.5.59 (like Safari/604.1)',
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'Accept': '*/*',
         'X-Requested-With': 'XMLHttpRequest',
-        'Origin': f'https://{host}',
+        'Origin': host,
         'Sec-Fetch-Site': 'same-origin',
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Dest': 'empty',
-        'Referer': f'https://{host}/sigin/loginpw.php',
+        'Referer': f'{host}/sigin/loginpw.php',
         'Accept-Encoding': 'gzip, deflate, br',
         'Priority': 'u=1, i'
     }
@@ -110,30 +110,32 @@ def send_post_request(redirect_location, cookies):
 
 # 実行
 def execute_requests(num_requests):
+    urls = read_urls_from_file()
     for i in range(num_requests):
-        print(f"\nExecuting request {i + 1} of {num_requests}")
-        if use_tor_proxy:
-            print("Restarting Tor proxy...")
-            restart_tor_proxy()
-        cookies, initial_cookie = get_initial_cookies()
-        if not cookies:
-            print("Failed to obtain initial cookies. Skipping to next request.")
-            continue
+        for url in urls:
+            print(f"\nExecuting request {i + 1} for URL: {url}")
+            if use_tor_proxy:
+                print("Restarting Tor proxy...")
+                restart_tor_proxy()
+            cookies, initial_cookie = get_initial_cookies(url)
+            if not cookies:
+                print("Failed to obtain initial cookies. Skipping to next request.")
+                continue
 
-        redirect_location = get_redirect_location(cookies)
-        if redirect_location:
-            response = send_post_request(redirect_location, cookies)
-            if response:
-                print('Status Code:', response.status_code)
-                print('Response Text:', response.text)
-                print('Generated login_id:', response.request.body.split(b'&')[0].decode().split('=')[1])
-                print('Generated login_pw:', response.request.body.split(b'&')[1].decode().split('=')[1])
-                print('Response Headers:', response.headers)
-                print('Response Cookies:', response.cookies)
+            redirect_location = get_redirect_location(url, cookies)
+            if redirect_location:
+                response = send_post_request(url, redirect_location, cookies)
+                if response:
+                    print('Status Code:', response.status_code)
+                    print('Response Text:', response.text)
+                    print('Generated login_id:', response.request.body.split(b'&')[0].decode().split('=')[1])
+                    print('Generated login_pw:', response.request.body.split(b'&')[1].decode().split('=')[1])
+                    print('Response Headers:', response.headers)
+                    print('Response Cookies:', response.cookies)
+                else:
+                    print("POST request failed.")
             else:
-                print("POST request failed.")
-        else:
-            print("Failed to get redirect location.")
+                print("Failed to get redirect location.")
 
 # 任意の回数リクエストを送信
 num_requests = 5  # ここに希望する回数を入力
