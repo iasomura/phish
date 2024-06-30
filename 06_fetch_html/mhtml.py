@@ -2,6 +2,8 @@ import logging
 from pyppeteer import launch
 from database import execute_sql
 import psycopg2
+import asyncio
+
 
 # Torのプロキシ設定
 #TOR_PROXY = 'socks5://127.0.0.1:9050'
@@ -33,6 +35,8 @@ async def fetch_website_as_mhtml(url, user_agent, website_id):
         # await page.authenticate({'username': 'your_username', 'password': 'your_password'})
         
         await page.goto(url, {'waitUntil': 'networkidle2'})
+        # 10秒間待機
+        await asyncio.sleep(10)
         cdp = await page._client.send('Page.captureSnapshot', {'format': 'mhtml'})
         mhtml_content = cdp['data']
         if mhtml_content:

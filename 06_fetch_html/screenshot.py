@@ -32,7 +32,10 @@ async def capture_screenshot(url, user_agent, filename, timeout=180):
         # プロキシ認証が必要な場合は以下のコメントを解除して設定してください
         # await page.authenticate({'username': 'your_username', 'password': 'your_password'})
         
-        await asyncio.wait_for(page.goto(url), timeout=timeout)
+        #await asyncio.wait_for(page.goto(url), timeout=timeout)
+        await asyncio.wait_for(page.goto(url, {'waitUntil': 'networkidle2'}), timeout=timeout)
+        # 10秒間待機
+        await asyncio.sleep(10)
         await asyncio.wait_for(page.screenshot({'path': filename, 'fullPage': True}), timeout=timeout)
         logging.info(f"Full page screenshot saved to {filename}")
         return True
