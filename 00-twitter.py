@@ -1,6 +1,8 @@
 import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
+import subprocess
+
 
 # データベース接続情報
 db_host = 'localhost'
@@ -58,9 +60,25 @@ def insert_url_data(url_list_file):
         )
         
         cursor.execute(sql_query, values)
+        # データベースにコミット
+        conn.commit()
     
-    # データベースにコミット
-    conn.commit()
+        # 各スクリプトを実行
+        scripts = [
+            "01_domain_status.py",
+            "02_whois.py",
+            "03_dig_data.py",
+            "04_ip_info.py",
+            "05_whois_domain.py",
+            "06_fetch_html/main.py"
+        ]
+    
+        
+        for script in scripts:
+            try:
+                subprocess.run(["python", script], check=True)
+            except subprocess.CalledProcessError as e:
+                print(f"Error occurred while running {script}: {e}")
 
     # データベース接続をクローズ
     cursor.close()

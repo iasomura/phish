@@ -11,9 +11,10 @@ from database import execute_sql
 import base64
 
 
+
 # ログの設定
 log_file = os.path.join(os.path.dirname(__file__), '07_error.log')
-logging.basicConfig(filename=log_file, level=logging.DEBUG)  # DEBUGレベルに変更
+#logging.basicConfig(filename=log_file, level=logging.DEBUG)  # DEBUGレベルに変更
 
 # 設定ファイルの読み込み
 config_file = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -25,63 +26,70 @@ db_name = config['database']['name']
 db_user = config['database']['user']
 db_password = config['database']['password']
 
-# タイムアウト付きで非同期にコマンドを実行する関数
-async def run_command_with_timeout(cmd, timeout=30):
-    try:
-        process = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
-        return stdout.decode()
-    except asyncio.TimeoutError:
-        logging.error(f"{datetime.now().isoformat()} - Command timed out: {cmd}")
-        return None
 
-
-
-# 非同期でSSL証明書情報を取得する関数
-async def get_ssl_certificate_info(domain):
-    try:
-        target_url = f"{domain}:443"
-        openssl_cmd = f"openssl s_client -connect {target_url} -showcerts"
-        openssl_output = await run_command_with_timeout(openssl_cmd)
-        #logging.info(f"{openssl_output}")
-        
-        if openssl_output is None:
-            return None
-
-        # SSLコンテキストを作成してTLSバージョンを指定
-        context = ssl.create_default_context()
-        with socket.create_connection((domain, 443)) as sock:
-            with context.wrap_socket(sock, server_hostname=domain) as conn:
-                cert = conn.getpeercert(True)
-
-                x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, cert)
-
-                domain = x509.get_subject().CN
-                issuer = x509.get_issuer().CN
-                expiry_date = x509.get_notAfter().decode('utf-8')
-                public_key = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, x509.get_pubkey()).decode('utf-8')
-                signature_algorithm = x509.get_signature_algorithm().decode('utf-8')
-                extensions = [x509.get_extension(i).get_short_name().decode('utf-8') for i in range(x509.get_extension_count())]
-                #extentions = "test"
-
-                return {
-                    'https_certificate_all': openssl_output,
-                    'cert': cert,
-                    'domain': domain,
-                    'issuer': issuer,
-                    'expiry_date': expiry_date,
-                    'public_key': public_key,
-                    'signature_algorithm': signature_algorithm,
-                    'extensions': extensions
-                }
-    except Exception as e:
-        logging.error(f"{datetime.now().isoformat()} - SSL Certificate Error: {str(e)} - {domain}")
-        return None
-
+async def get_ssl_certificate_info(domain, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            context = ssl.create_default_context()
+            with socket.create_connection((domain, 443)) as sock:
+                with context.wrap_socket(sock, server_hostname=domain) as conn:
+                    https_certificate_all = ""
+                    
+                    # SSL/TLS handshake information
+                    https_certificate_all += f"Connected to {domain}:{conn.getpeername()[1]}\n"
+                    https_certificate_all += f"Protocol: {conn.version()}\n"
+                    https_certificate_all += f"Cipher: {conn.cipher()[0]}\n\n"
+                    
+                    # Certificate chain
+                    cert = conn.getpeercert(True)
+                    x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, cert)
+                    
+                    https_certificate_all += "Certificate chain:\n"
+                    cert_chain = conn.getpeercert()
+                    for i, cert_dict in enumerate(cert_chain.get('subject', []) + cert_chain.get('issuer', [])):
+                        cert_info = ', '.join([f"{k}={v}" for k, v in cert_dict])
+                        https_certificate_all += f" {i} s:{cert_info}\n"
+                    
+                    https_certificate_all += "\nServer certificate:\n"
+                    https_certificate_all += ssl.DER_cert_to_PEM_cert(cert)
+                    
+                    subject = x509.get_subject()
+                    issuer = x509.get_issuer()
+                    expiry_date = x509.get_notAfter().decode('utf-8')
+                    public_key = OpenSSL.crypto.dump_publickey(OpenSSL.crypto.FILETYPE_PEM, x509.get_pubkey()).decode('utf-8')
+                    signature_algorithm = x509.get_signature_algorithm().decode('utf-8')
+                    extensions = [x509.get_extension(i) for i in range(x509.get_extension_count())]
+                    
+                    https_certificate_all += f"subject={', '.join([f'{k.decode()}={v.decode()}' for k, v in subject.get_components()])}\n"
+                    https_certificate_all += f"issuer={', '.join([f'{k.decode()}={v.decode()}' for k, v in issuer.get_components()])}\n"
+                    https_certificate_all += f"---\nNo client certificate CA names sent\n"
+                    https_certificate_all += f"---\nSSL handshake has read {conn.context.verify_mode} bytes and written {conn.context.verify_mode} bytes\n"
+                    https_certificate_all += f"---\nNew, {conn.version()}, Cipher is {conn.cipher()[0]}\n"
+                    https_certificate_all += f"Server public key is {x509.get_pubkey().bits()} bit\n"
+                    https_certificate_all += f"Secure Renegotiation IS NOT supported\n"
+                    https_certificate_all += f"Compression: NONE\n"
+                    https_certificate_all += f"Expansion: NONE\n"
+                    https_certificate_all += f"No ALPN negotiated\n"
+                    https_certificate_all += f"Early data was not sent\n"
+                    https_certificate_all += f"Verify return code: {conn.context.verify_mode}\n"
+                    https_certificate_all += f"---\n"
+                    
+                    logging.info(f"Certificate info retrieved for {domain}")
+                    return {
+                        'https_certificate_all': https_certificate_all,
+                        'cert': cert,
+                        'domain': subject.CN,
+                        'issuer': issuer.CN,
+                        'expiry_date': expiry_date,
+                        'public_key': public_key,
+                        'signature_algorithm': signature_algorithm,
+                        'extensions': [ext.get_short_name().decode('utf-8') for ext in extensions]
+                    }
+        except Exception as e:
+            logging.error(f"{datetime.now().isoformat()} - SSL Certificate Error: {str(e)} - {domain}")
+            if attempt == max_retries - 1:
+                return None
+            await asyncio.sleep(2 ** attempt)  # 指数バックオフ
 
 
 # 非同期で取得したSSL証明書情報をデータベースに保存する関数

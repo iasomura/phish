@@ -16,7 +16,7 @@ async def execute_sql(sql, *params):
         cur = conn.cursor()
         cur.execute(sql, params)
         # ログにSQL文を出力
-        logging.debug(f"Executing SQL: {sql} with params: {params}")
+        #logging.debug(f"Executing SQL: {sql} with params: {params}")
         conn.commit()
         cur.close()
     except (Exception, psycopg2.DatabaseError) as error:

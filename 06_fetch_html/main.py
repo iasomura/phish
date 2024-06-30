@@ -7,6 +7,7 @@ from config import USER_AGENTS, BASEFOLDER, BASEFOLDER_MHTML
 from database import execute_sql, get_websites_to_process
 from screenshot import capture_screenshot
 from mhtml import fetch_website_as_mhtml
+from urllib.parse import urlparse
 
 # 07_certificateの関数をインポート
 from ssl_certificate import get_ssl_certificate_info, save_ssl_certificate_info, update_status_to_97
@@ -49,10 +50,17 @@ async def process_website(destination, semaphore, progress_tracker):
         # スクリーンショット情報の更新
         await update_screenshot_info(website_id, screenshot_availability, *screenshot_results, filename_prefix)
 
+        # ドメイン名抽出
+        def extract_domain(url):
+            parsed_url = urlparse(url)
+            domain_for_ssl = parsed_url.netloc
+            return domain_for_ssl
+        
         # SSL証明書情報の取得と保存
-        ssl_certificate_info = await get_ssl_certificate_info(domain)
+        resolved_domain = extract_domain(url)
+        ssl_certificate_info = await get_ssl_certificate_info(resolved_domain)
         if ssl_certificate_info:
-            await save_ssl_certificate_info(website_id, domain, ssl_certificate_info)
+            await save_ssl_certificate_info(website_id, resolved_domain, ssl_certificate_info)
             print(website_id)
         else:
             await update_status_to_97(website_id)
