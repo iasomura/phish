@@ -15,7 +15,7 @@ PROXIES = {
 def renew_tor_ip(use_proxy):
     if use_proxy:
         print("Renewing Tor IP...")
-        os.system('systemctl restart tor')
+        os.system('sudo systemctl restart tor')
         time.sleep(10)  # TorがIPを更新するのを待つ
 
 # 2. Webサイトのリストをテキストファイルから読み込む
@@ -136,6 +136,8 @@ def main():
 
                 if update_response['code'] == 200:
                     print(f"Password updated successfully with password: {random_password}")
+                    time.sleep(120)  # とりあえず休んでおく
+
                 else:
                     print(f"Failed to update password: {update_response['message']}")
             else:
