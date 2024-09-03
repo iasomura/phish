@@ -1,16 +1,22 @@
 import psycopg2
 import subprocess
 import signal
+import json
 
 # タイムアウト処理のための関数
 def timeout_handler(signum, frame):
     raise TimeoutError("dig command timed out")
 
+# 設定ファイルの読み込み
+with open('config.json', 'r') as config_file:
+    config = json.load(config_file)
+
 # データベース接続情報
-db_host = 'localhost'
-db_name = 'website_data'
-db_user = 'postgres'
-db_password = 'asomura'
+db_config = config['database']
+db_host = db_config['host']
+db_name = db_config['name']
+db_user = db_config['user']
+db_password = db_config['password']
 
 try:
     # データベースへの接続
@@ -21,14 +27,12 @@ try:
     domains = cur.fetchall()
     total_domains = len(domains)
     domains_processed = 0
-
     for domain_data in domains:
         domain_id, domain = domain_data
         try:
             # タイムアウトの設定（例：10秒）
             signal.signal(signal.SIGALRM, timeout_handler)
             signal.alarm(10)
-
             try:
                 # digコマンドの実行
                 result = subprocess.run(['dig', domain, 'AAA'], capture_output=True, text=True, timeout=10)
@@ -36,7 +40,6 @@ try:
                 
                 # タイムアウトのキャンセル
                 signal.alarm(0)
-
                 # NXDOMAINまたはNOERRORのみの場合のみ記録
                 if 'NXDOMAIN' in dig_output:
                     domain_status = 'NXDOMAIN'
@@ -61,7 +64,6 @@ try:
         finally:
             # タイムアウトのリセット
             signal.alarm(0)
-
 except Exception as e:
     print(f"Database connection error: {e}")
 finally:
