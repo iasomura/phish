@@ -1,115 +1,126 @@
-import os
+import logging
 import psycopg2
-import subprocess
-import shlex
-import datetime
-import ipaddress
-import signal
+import requests
+from psycopg2 import OperationalError
+import json
 
-# タイムアウト例外
-class CommandTimeout(Exception):
-    pass
+# ログの設定
+log_file = '04_ierror.log'
+logging.basicConfig(filename=log_file, level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# タイムアウトハンドラ
-def timeout_handler(signum, frame):
-    raise CommandTimeout("Command timed out")
-
-# タイムアウト付きでコマンドを実行する関数
-def run_command_with_timeout(cmd, timeout=30):
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(timeout)
-    try:
-        result = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        signal.alarm(0)  # タイムアウトをリセット
-        return result.stdout
-    except CommandTimeout:
-        return b'TIMEOUT'
-    except subprocess.CalledProcessError as e:
-        return b'ERROR'
-    finally:
-        signal.alarm(0)  # タイムアウトをリセット
+# 設定ファイルの読み込み
+with open('config.json', 'r') as config_file:
+    config = json.load(config_file)
 
 # データベース接続情報
-db_host = 'localhost'
-db_name = 'website_data'
-db_user = 'postgres'
-db_password = 'asomura'
+db_config = config['database']
+DB_HOST = db_config['host']
+DB_NAME = db_config['name']
+DB_USER = db_config['user']
+DB_PASSWORD = db_config['password']
 
-try:
-    # PostgreSQLへの接続を確立
-    conn_params = {
-        "host": db_host,
-        "database": db_name,
-        "user": db_user,
-        "password": db_password
-    }
-    conn = psycopg2.connect(**conn_params)
-    cur = conn.cursor()
-
-    # SQLクエリを定義
-    sql_query = """
-        SELECT id, ip_address
-        FROM website_data
-        WHERE status = 4
-    """
-
-    # SQLクエリを実行
-    cur.execute(sql_query)
-    results = cur.fetchall()
-    total_records = len(results)
-    processed_records = 0
-
-    # 各IPアドレスに対してWHOISを実行し、データベースに挿入
-    for row in results:
-        record_id, ip_address = row
-
-        # IPアドレスの形式を検証
-        try:
-            ip = ipaddress.ip_address(ip_address)
-        except ValueError as e:
-            print(f"無効なIPアドレス {ip_address}: {e}")
-            continue
-
-        cmd = f"whois {ip}"
-        whois_output = run_command_with_timeout(cmd)
-
-        # WHOISの出力をデコード
-        whois_output_decoded = whois_output.decode('utf-8', errors='ignore')
-
-        # whois_ipカラムに挿入するためのSQLクエリを定義
-        update_query = """
-            UPDATE website_data
-            SET
-            last_update = %s,
-            status = %s,
-            whois_ip = %s
-            WHERE id = %s
-        """
-
-        # 現在の日時を取得
-        current_time = datetime.datetime.now()
-
-        # statusの設定
-        if whois_output_decoded == 'TIMEOUT':
-            status = 98  # タイムアウトの場合
-        elif whois_output_decoded == 'ERROR':
-            status = 99  # エラーの場合
-        else:
-            status = 5   # 正常な場合
-
-        # whois_ipカラムにWHOIS情報を挿入
-        cur.execute(update_query, (current_time, status, whois_output_decoded, record_id))
+def update_ip_info():
+    conn = None
+    try:
+        # データベースに接続
+        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+        cur = conn.cursor()
+        
+        # IPアドレスの形式が正しいかどうかを確認し、形式が正しくない場合はNULLに設定
+        cur.execute(r"""
+            UPDATE website_data 
+            SET ip_address = NULL
+            WHERE ip_address !~ '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'
+        """)
         conn.commit()
+        print("IPアドレスの形式を確認しました。")
+        
+        # IPアドレスが正しい形式で、かつ情報が未取得のレコードを選択して更新
+        cur.execute("""
+            SELECT id, ip_address 
+            FROM website_data
+            WHERE ip_address IS NOT NULL
+            AND status = 3
+        """)
+        rows = cur.fetchall()
+        total_rows = len(rows)
+        processed_rows = 0
+        
+        # 各レコードに対して処理を行う
+        for row in rows:
+            id, ip_address = row
+            processed_rows += 1
+            print(f"処理中: {processed_rows}/{total_rows}")
+            try:
+                # ip-api.comからデータを取得
+                url = f"http://ip-api.com/json/{ip_address}"
+                print(url)
+                response = requests.get(url).json()
+                
+                # レスポンスが成功の場合、情報を取得しデータベースを更新
+                if response.get("status") == "success":
+                    ip_info = str(response)
+                    org = response.get("org", "N/A")
+                    isp = response.get("isp", "N/A")
+                    country = response.get("country", "N/A")
+                    print(isp)
+                    print(country)
+                    
+                    # データを更新
+                    update_query = """
+                        UPDATE website_data
+                        SET last_update = now(),
+                            status = 4,
+                            ip_info = %s,
+                            ip_retrieval_date = now(),
+                            ip_organization = %s,
+                            hosting_provider = %s,
+                            ip_location = %s
+                        WHERE id = %s
+                    """
+                    cur.execute(update_query, (ip_info, org, isp, country, id))
+                    conn.commit()
+                else:
+                    raise ValueError("APIレスポンスのステータスが成功ではありません")
+            except requests.RequestException as e:
+                print(f"リクエストエラー: {e}")
+                # ステータスを99に変更し、次のレコードに進む
+                cur.execute("""
+                    UPDATE website_data
+                    SET status = 99
+                    WHERE id = %s
+                """, (id,))
+                conn.commit()
+                # エラーログをファイルに記録
+                logging.error(f"リクエストエラー: {e}")
+            except KeyError as e:
+                print(f"キーが見つかりません: {e}")
+                # 次のレコードに進む
+                continue
+            except ValueError as e:
+                print(f"無効なAPIレスポンス: {e}")
+                # ステータスを99に変更し、次のレコードに進む
+                cur.execute("""
+                    UPDATE website_data
+                    SET status = 99
+                    WHERE id = %s
+                """, (id,))
+                conn.commit()
+                logging.error(f"無効なAPIレスポンス: {e}")
+            except Exception as e:
+                print(f"予期しないエラー: {e}")
+                logging.error(f"予期しないエラー: {e}")
+    except OperationalError as e:
+        print(f"データベースエラー: {e}")
+        logging.error(f"データベースエラー: {e}")
+    finally:
+        # データベース接続をクローズ
+        if conn:
+            cur.close()
+            conn.close()
+            print("データベース接続がクローズされました。")
 
-        processed_records += 1
-        print(f"処理済み: {processed_records}/{total_records}")
-
-except psycopg2.Error as e:
-    print("データベースエラー:", e)
-
-finally:
-    # カーソルと接続をクローズ
-    if cur:
-        cur.close()
-    if conn:
-        conn.close()
+if __name__ == "__main__":
+    # IP情報の更新を実行
+    update_ip_info()
+    print("処理が完了しました。")
