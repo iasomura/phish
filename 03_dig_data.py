@@ -3,15 +3,21 @@ import subprocess
 import psycopg2
 import logging
 from urllib.parse import urlparse
+import json
 
 # ログの設定
 logging.basicConfig(filename='03_error.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# 設定ファイルの読み込み
+with open('config.json', 'r') as config_file:
+    config = json.load(config_file)
+
 # データベース接続情報
-db_host = 'localhost'
-db_name = 'website_data'
-db_user = 'postgres'
-db_password = 'asomura'
+db_config = config['database']
+db_host = db_config['host']
+db_name = db_config['name']
+db_user = db_config['user']
+db_password = db_config['password']
 
 def execute_command(command):
     """
