@@ -3,6 +3,7 @@ import subprocess
 import shlex
 import tldextract
 import signal
+import json
 
 # タイムアウト処理のための関数
 def timeout_handler(signum, frame):
@@ -17,12 +18,17 @@ def remove_subdomain(domain):
         return domain
     else:
         return domain
-    
+
+# 設定ファイルの読み込み
+with open('config.json', 'r') as config_file:
+    config = json.load(config_file)
+
 # データベース接続情報
-db_host = 'localhost'
-db_name = 'website_data'
-db_user = 'postgres'
-db_password = 'asomura'
+db_config = config['database']
+db_host = db_config['host']
+db_name = db_config['name']
+db_user = db_config['user']
+db_password = db_config['password']
 
 try:
     # データベース接続
