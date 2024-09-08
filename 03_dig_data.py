@@ -1,17 +1,21 @@
 import re
 import subprocess
 import psycopg2
+from psycopg2 import sql
 import logging
 from urllib.parse import urlparse
+import config
+
+
+
+"""
+このプログラムは、指定されたウェブサイトのドメイン情報（Aレコード、MXレコード、NSレコード、IPアドレス）をDNSクエリを使って取得し、その結果をデータベースに更新するものです。
+"""
 
 # ログの設定
 logging.basicConfig(filename='03_error.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# データベース接続情報
-db_host = 'localhost'
-db_name = 'website_data'
-db_user = 'postgres'
-db_password = 'asomura'
+
 
 def execute_command(command):
     """
@@ -52,9 +56,10 @@ def extract_domain_from_url(url):
     parsed_url = urlparse(url)
     return parsed_url.hostname
 
+
 def update_website_data(connection):
     """
-    ウェブサイトデータを更新する関数
+    ウェブサイトデータを更新し、データの長さを確認する関数
     """
     cursor = connection.cursor()
     try:
@@ -91,6 +96,10 @@ def update_website_data(connection):
                 # NSレコードを調べ、結果をdig_info_NS TEXTに格納する
                 dig_info_NS = execute_command(f"dig +noall +answer {domain} NS")
 
+                # データの長さをチェック
+                if (len(dig_info_A) <= 1 or len(dig_info_MX) <= 1 or len(dig_info_NS) <= 1):
+                    raise ValueError(f"データが1バイト以下です: domain={domain}, A={len(dig_info_A)}, MX={len(dig_info_MX)}, NS={len(dig_info_NS)}")
+
                 # データベースを更新する
                 cursor.execute("UPDATE website_data SET last_update = now(), status = 3, dig_info_A = %s, dig_info_TTL_A = %s, dig_info_MX = %s, dig_info_NS = %s, ip_address = %s WHERE id = %s",
                                (dig_info_A, dig_info_TTL_A, dig_info_MX, dig_info_NS, ip_address, website_id))
@@ -99,6 +108,9 @@ def update_website_data(connection):
                 # 処理進捗を表示
                 processed_websites += 1
                 print(f"進捗: {processed_websites}/{total_websites}", end="\r")
+                # 更新されたデータを確認し表示
+                check_and_display_website_data(cursor, website_id)
+
             except Exception as e:
                 # エラーが発生した場合はロールバック
                 cursor.execute("UPDATE website_data SET last_update = now(), status = 99 WHERE id = %s",
@@ -106,9 +118,11 @@ def update_website_data(connection):
 
                 connection.commit()
                 # エラーログを記録
-                logging.error("エラーが発生しました: %s", e)
-                print("エラーが発生しました:", e)
+                logging.error(f"エラーが発生しました (website_id={website_id}): %s", e)
+                print(f"エラーが発生しました (website_id={website_id}):", e)
 
+        
+                
         print("\nウェブサイトデータが正常に更新されました。")
 
     except Exception as e:
@@ -119,10 +133,47 @@ def update_website_data(connection):
         cursor.close()
         connection.close()
 
+
+        
+def check_and_display_website_data(cursor, website_id):
+    """
+    指定されたwebsite_idのデータを確認し、表示する関数
+    """
+    try:
+        # SQLクエリを準備
+        query = sql.SQL("""
+        SELECT dig_info_A, dig_info_TTL_A, dig_info_MX, dig_info_NS, ip_address
+        FROM website_data
+        WHERE id = {}
+        """).format(sql.Literal(website_id))
+
+        # クエリを実行
+        cursor.execute(query)
+
+        # 結果を取得
+        result = cursor.fetchone()
+
+        if result:
+            dig_info_A, dig_info_TTL_A, dig_info_MX, dig_info_NS, ip_address = result
+
+            print(f"\nWebsite ID: {website_id}")
+            print(f"dig_info_A: {dig_info_A}")
+            print(f"dig_info_TTL_A: {dig_info_TTL_A}")
+            print(f"dig_info_MX: {dig_info_MX}")
+            print(f"dig_info_NS: {dig_info_NS}")
+            print(f"ip_address: {ip_address}")
+        else:
+            print(f"\nデータが見つかりません。(Website ID: {website_id})")
+    except Exception as e:
+        print(f"データの確認中にエラーが発生しました: {e}")
+
+
 if __name__ == "__main__":
     # PostgreSQLデータベースに接続
     try:
-        connection = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
+        db_config = config.load_db_config()
+        connection = psycopg2.connect(**db_config)
+        #connection = psycopg2.connect(host=db_host, database=db_name, user=db_user, password=db_password)
         update_website_data(connection)
     except psycopg2.Error as e:
         # データベースエラーをログに記録

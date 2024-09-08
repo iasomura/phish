@@ -2,13 +2,13 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 import subprocess
+import json
+import config
 
 
-# データベース接続情報
-db_host = 'localhost'
-db_name = 'website_data'
-db_user = 'postgres'
-db_password = 'asomura'
+# データベース接続情報をロード
+db_config = config.load_db_config()
+
 
 # URL一覧が記録されたテキストファイルのパス
 url_list_file = 'twitter.txt'
@@ -20,7 +20,8 @@ def insert_url_data(url_list_file):
         urls = f.readlines()
 
     # データベースに接続
-    conn = psycopg2.connect(host=db_host, dbname=db_name, user=db_user, password=db_password)
+    conn = psycopg2.connect(**db_config)
+   # conn = psycopg2.connect(host=db_host, dbname=db_name, user=db_user, password=db_password)
     cursor = conn.cursor()
 
     for url in urls:
@@ -69,7 +70,7 @@ def insert_url_data(url_list_file):
             "02_whois.py",
             "03_dig_data.py",
             "04_ip_info.py",
-            "05_whois_domain.py",
+            "05_whois_ip.py",
             "06_fetch_html/main.py"
         ]
     

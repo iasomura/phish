@@ -3,10 +3,20 @@ import subprocess
 import shlex
 import tldextract
 import signal
+import config
+
+"""
+このプログラムは、データベース内の特定のドメインに対してWHOIS情報を取得し、その結果をデータベースに更新するものです。
+whoisの応答結果は不定形なデータとなるため、次のデータベースカラムについては、データが入らない可能性があります。
+whoisdomain_registrar | registrant_name | admin_name | tech_name 
+"""
 
 # タイムアウト処理のための関数
 def timeout_handler(signum, frame):
     raise TimeoutError("whois command timed out")
+
+# データベース接続情報をロード
+db_config = config.load_db_config()
 
 # サブドメインを削除する関数
 def remove_subdomain(domain):
@@ -17,21 +27,10 @@ def remove_subdomain(domain):
         return domain
     else:
         return domain
-    
-# データベース接続情報
-db_host = 'localhost'
-db_name = 'website_data'
-db_user = 'postgres'
-db_password = 'asomura'
 
 try:
     # データベース接続
-    conn = psycopg2.connect(
-        host=db_host,
-        database=db_name,
-        user=db_user,
-        password=db_password
-    )
+    conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
 
     # NOERRORのドメインを抽出
@@ -122,6 +121,34 @@ try:
     # 処理完了を表示
     print("All domains processed.")
 
+    # データベースの更新を確認
+    print("\nVerifying database updates:")
+    cur.execute("SELECT id, domain, whois_domain, domain_registrar, registrant_name, admin_name, tech_name FROM website_data WHERE status = 2 LIMIT 5")
+    verified_rows = cur.fetchall()
+
+    if verified_rows:
+        for row in verified_rows:
+            print(f"\nID: {row[0]}")
+            print(f"Domain: {row[1]}")
+            print(f"WHOIS Domain: {'Updated' if row[2] else 'Not Updated'}")
+            print(f"Domain Registrar: {row[3] or 'Not Available'}")
+            print(f"Registrant Name: {row[4] or 'Not Available'}")
+            print(f"Admin Name: {row[5] or 'Not Available'}")
+            print(f"Tech Name: {row[6] or 'Not Available'}")
+    else:
+        print("No updated records found.")
+
+    # タイムアウトしたドメインの数を確認
+    cur.execute("SELECT COUNT(*) FROM website_data WHERE status = 98")
+    timeout_count = cur.fetchone()[0]
+    print(f"\nNumber of domains that timed out: {timeout_count}")
+
+    # エラーが発生したドメインの数を確認
+    cur.execute("SELECT COUNT(*) FROM website_data WHERE status = 99")
+    error_count = cur.fetchone()[0]
+    print(f"Number of domains with errors: {error_count}")
+
+
 except Exception as e:
     print(f"Database connection error: {e}")
 
@@ -129,5 +156,3 @@ finally:
     # データベース接続を閉じる
     if cur:
         cur.close()
-    if conn:
-        conn.close()

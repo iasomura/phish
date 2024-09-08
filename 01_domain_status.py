@@ -1,20 +1,18 @@
 import psycopg2
 import subprocess
 import signal
+import config
 
 # タイムアウト処理のための関数
 def timeout_handler(signum, frame):
     raise TimeoutError("dig command timed out")
 
-# データベース接続情報
-db_host = 'localhost'
-db_name = 'website_data'
-db_user = 'postgres'
-db_password = 'asomura'
+# データベース接続情報をロード
+db_config = config.load_db_config()
 
 try:
     # データベースへの接続
-    conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
+    conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
     # ドメイン情報を取得
     cur.execute("SELECT id, domain FROM website_data WHERE domain_status IS NULL AND status = 0")
@@ -69,3 +67,12 @@ finally:
     if conn:
         cur.close()
         conn.close()
+
+"""
+データベースに書き込みができたかどうかの確認
+SELECT domain, domain_status, last_update, status 
+FROM website_data 
+WHERE domain_status IS NOT NULL 
+ORDER BY last_update DESC 
+LIMIT 10;
+"""
