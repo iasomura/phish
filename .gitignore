@@ -1,0 +1,7 @@
+*.txt
+*.old
+*.gz
+*.tgz
+*.tar.gz
+*.csv
+*.log
