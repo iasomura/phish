@@ -227,13 +227,13 @@ def main():
     while True:
         try:
             schedule.run_pending()
-            time.sleep(15)
+            time.sleep(15 * 60) #15分ごとに実行
         except KeyboardInterrupt:
             logging.info("プログラムを終了します...")
             break
         except Exception as e:
             logging.error(f"スケジュール実行中のエラー: {e}")
-            time.sleep(300)  # エラー時は5分待機してから再試行
+            time.sleep(7 * 60)  # エラー時は7分待機してから再試行
 
 if __name__ == "__main__":
     main()
