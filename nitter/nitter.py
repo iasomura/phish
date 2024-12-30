@@ -6,6 +6,7 @@ import schedule
 import time
 import re
 import requests
+from requests.exceptions import RequestException
 import os
 import json
 from datetime import datetime
@@ -13,6 +14,8 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 import config
+import socket
+import socks
 
 class RSSMonitor:
     def __init__(self, feed_config):
@@ -27,6 +30,69 @@ class RSSMonitor:
         
         # データベース設定の読み込み
         self.db_config = config.load_db_config()
+
+        # Tor設定の適用
+        if hasattr(config, 'USE_TOR') and config.USE_TOR:
+            self.setup_tor()
+
+    def setup_tor(self):
+        """Tor接続の設定"""
+        socks.set_default_proxy(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9050)
+        socket.socket = socks.socksocket
+        logging.info("Tor proxy configuration applied")
+
+    def restart_tor(self):
+        """Torを再起動する"""
+        try:
+            # Torサービスを再起動
+            os.system('sudo systemctl restart tor')
+            # 再起動完了まで待機
+            time.sleep(10)  
+            logging.info("Tor service restarted successfully")
+            
+            # 新しいIPアドレスの確認
+            session = self.get_session()
+            try:
+                response = session.get('https://check.torproject.org/')
+                if 'Congratulations' in response.text:
+                    logging.info("Successfully connected to Tor with new IP")
+                    return True
+            except Exception as e:
+                logging.error(f"Failed to verify new Tor connection: {e}")
+                return False
+                
+        except Exception as e:
+            logging.error(f"Failed to restart Tor: {e}")
+            return False
+
+    def check_rss_with_new_ip(self):
+        """Torを再起動してから RSS チェックを実行"""
+        if hasattr(config, 'USE_TOR') and config.USE_TOR:
+            if not self.restart_tor():
+                logging.error("Skipping RSS check due to Tor restart failure")
+                return
+        
+        self.check_rss()
+
+    def get_session(self):
+        """リクエストセッションを取得"""
+        session = requests.Session()
+        if hasattr(config, 'USE_TOR') and config.USE_TOR:
+            session.proxies = {
+                'http': 'socks5h://127.0.0.1:9050',
+                'https': 'socks5h://127.0.0.1:9050'
+            }
+        return session
+
+    def check_tor_connection(self):
+        """Tor接続のテスト"""
+        try:
+            session = self.get_session()
+            response = session.get('https://check.torproject.org/')
+            return 'Congratulations' in response.text
+        except Exception as e:
+            logging.error(f"Tor connection test failed: {e}")
+            return False
 
     def normalize_url(self, url):
         """URLを正規化する"""
@@ -147,13 +213,21 @@ class RSSMonitor:
     def check_rss(self):
         """RSSフィードをチェックして更新を処理"""
         try:
+            session = self.get_session()
+            
+            # Tor使用時は接続テスト
+            if hasattr(config, 'USE_TOR') and config.USE_TOR:
+                if not self.check_tor_connection():
+                    logging.error("Tor connection test failed. Skipping RSS check.")
+                    return
+
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br'
             }
             
-            response = requests.get(self.feed_url, headers=headers, timeout=30)
+            response = session.get(self.feed_url, headers=headers, timeout=30)
             
             if response.status_code != 200:
                 logging.error(f"{self.feed_name}: RSSフィード取得エラー: ステータスコード {response.status_code}")
@@ -187,7 +261,9 @@ class RSSMonitor:
             if new_latest_guid:
                 self.save_latest_feed(new_latest_guid)
 
-        except requests.RequestException as e:
+        except requests.exceptions.ProxyError as e:
+            logging.error(f"{self.feed_name}: Torプロキシ接続エラー: {e}")
+        except RequestException as e:
             logging.error(f"{self.feed_name}: ネットワークエラー: {e}")
         except Exception as e:
             logging.error(f"{self.feed_name}: 予期せぬエラー: {e}")
@@ -220,20 +296,20 @@ def main():
     
     # スケジュール設定
     for monitor in monitors:
-        schedule.every(10).minutes.do(monitor.check_rss)
+        schedule.every(10).minutes.do(monitor.check_rss_with_new_ip)
         logging.info(f"{monitor.feed_name}: 監視を開始します...")
     
     # メインループ
     while True:
         try:
             schedule.run_pending()
-            time.sleep(15 * 60) #15分ごとに実行
+            time.sleep(60)  # 1分ごとにスケジュールをチェック
         except KeyboardInterrupt:
             logging.info("プログラムを終了します...")
             break
         except Exception as e:
             logging.error(f"スケジュール実行中のエラー: {e}")
-            time.sleep(7 * 60)  # エラー時は7分待機してから再試行
+            time.sleep(60)  # エラー時は1分待機してから再試行
 
 if __name__ == "__main__":
     main()
